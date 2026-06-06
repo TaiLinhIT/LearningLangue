@@ -1,21 +1,36 @@
 .navbar {
+    background: #ffffff;
+    border-bottom: 1px solid #dfe7f2;
     min-height: 64px;
-    background: #172033;
 }
 
 .navbar-brand {
-    color: #fff;
+    color: #243042;
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 900;
     letter-spacing: 0;
+}
+
+.navbar-brand::before {
+    background: #58cc02;
+    border-radius: 8px;
+    box-shadow: 0 3px 0 #3f9301;
+    content: "LF";
+    display: inline-flex;
+    font-size: .75rem;
+    height: 30px;
+    justify-content: center;
+    align-items: center;
+    margin-right: .55rem;
+    width: 30px;
 }
 
 .navbar-toggler {
     appearance: none;
-    background-color: rgba(255, 255, 255, .12);
-    border: 1px solid rgba(255, 255, 255, .25);
-    border-radius: 6px;
-    color: #fff;
+    background-color: #f5fbef;
+    border: 1px solid #c8f3b0;
+    border-radius: 8px;
+    color: #347a00;
     cursor: pointer;
     display: none;
     height: 2.5rem;
@@ -35,44 +50,52 @@
 .nav-scrollable {
     height: calc(100vh - 64px);
     overflow-y: auto;
-    padding: .75rem 0 1rem;
+    padding: .9rem .75rem 1rem;
 }
 
 .nav-item {
     font-size: .95rem;
-    padding-bottom: .2rem;
+    padding-bottom: .25rem;
 }
 
 .nav-link {
     align-items: center;
     border-radius: 8px;
-    color: #c9d4e8;
+    color: #526173;
     display: flex;
+    font-weight: 800;
     gap: .75rem;
-    min-height: 42px;
+    min-height: 44px;
 }
 
 .nav-link span {
     align-items: center;
-    color: #8fd4ff;
+    background: #eef8ff;
+    border: 1px solid #caeafa;
+    border-radius: 8px;
+    color: #176f9b;
     display: inline-flex;
-    font-size: .95rem;
+    font-size: .9rem;
+    height: 28px;
     justify-content: center;
-    width: 24px;
+    width: 28px;
 }
 
 .nav-link:hover {
-    background: rgba(255, 255, 255, .08);
-    color: #fff;
+    background: #f5fbef;
+    color: #243042;
 }
 
 .nav-link.active {
-    background: #2d6cdf;
-    color: #fff;
+    background: #effce7;
+    border: 1px solid #c8f3b0;
+    color: #347a00;
 }
 
 .nav-link.active span {
-    color: #fff;
+    background: #58cc02;
+    border-color: #58cc02;
+    color: #10210a;
 }
 
 @media (max-width: 900px) {

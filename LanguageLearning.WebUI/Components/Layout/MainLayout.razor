@@ -1,20 +1,68 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <div class="top-row px-4">
-            <div class="top-status">
-                <span>Streak 12 ngay</span>
-                <span>Cap do A2</span>
-            </div>
-            <a class="btn btn-sm btn-primary" href="auth">Dang nhap</a>
+<div class="app-shell">
+    <header class="site-header">
+        <div class="site-header-inner">
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Placeholder="Tim khoa hoc, tu vung, bai luyen nghe..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Class="site-search" />
+
+            <AuthorizeView>
+                <Authorized Context="authContext">
+                    <div class="site-auth-actions signed-in-actions">
+                        <MudButton Href="account"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.AccountCircle"
+                                   Class="auth-button login-button">
+                            @GetDisplayName(authContext.User)
+                        </MudButton>
+                        <form method="post" action="/auth/sign-out" class="sign-out-form">
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Logout"
+                                       Class="auth-button register-button">
+                                Dang xuat
+                            </MudButton>
+                        </form>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="site-auth-actions">
+                        <MudButton Href="auth?mode=login"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Login"
+                                   Class="auth-button login-button">
+                            Dang nhap
+                        </MudButton>
+                        <MudButton Href="auth?mode=register"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   Class="auth-button register-button">
+                            Dang ky
+                        </MudButton>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
+    </header>
 
-        <article class="content">
+    <main class="app-main">
+        <article class="app-content">
             @Body
         </article>
     </main>
@@ -25,3 +73,37 @@
     <a href="" class="reload">Tai lai</a>
     <a class="dismiss">x</a>
 </div>
+
+@code {
+    private string? _searchText;
+
+    private static string GetDisplayName(ClaimsPrincipal user) =>
+        user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tai khoan";
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#58cc02",
+            Secondary = "#1cb0f6",
+            Tertiary = "#ffc800",
+            Background = "#f7fafc",
+            Surface = "#ffffff",
+            AppbarBackground = "#ffffff",
+            TextPrimary = "#243042",
+            TextSecondary = "#68768a",
+            LinesDefault = "#dfe7f2"
+        },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography
+            {
+                FontFamily = ["Nunito", "Arial", "Helvetica", "sans-serif"]
+            }
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "8px"
+        }
+    };
+}

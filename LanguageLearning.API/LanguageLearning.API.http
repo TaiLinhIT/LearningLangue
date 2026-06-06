@@ -1,6 +1,21 @@
-@LanguageLearning.API_HostAddress = http://localhost:5066
+@LanguageLearning.API_HostAddress = http://localhost:5088
 
-GET {{LanguageLearning.API_HostAddress}}/weatherforecast/
+GET {{LanguageLearning.API_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{LanguageLearning.API_HostAddress}}/api/database/status
+Accept: application/json
+
+###
+
+GET {{LanguageLearning.API_HostAddress}}/api/languages
+Accept: application/json
+
+###
+
+POST {{LanguageLearning.API_HostAddress}}/api/database/initialize-demo
 Accept: application/json
 
 ###

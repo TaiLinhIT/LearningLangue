@@ -1,49 +1,80 @@
-.page {
-    display: flex;
+.app-shell {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .96) 0, rgba(247, 250, 252, .96) 280px),
+        #f7fafc;
     min-height: 100vh;
-    background: #f5f7fb;
 }
 
-.sidebar {
-    width: 270px;
-    flex-shrink: 0;
-    background: #172033;
+.site-header {
+    background: rgba(255, 255, 255, .92);
+    border-bottom: 1px solid rgba(223, 231, 242, .9);
+    box-shadow: 0 10px 28px rgba(36, 48, 66, .06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(18px);
 }
 
-main {
-    flex: 1;
+.site-header-inner {
+    align-items: center;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(240px, 1fr) auto;
+    margin: 0 auto;
+    max-width: 1180px;
+    min-height: 74px;
+    padding: .75rem clamp(1rem, 3vw, 2rem);
+}
+
+.site-auth-actions {
+    display: flex;
+    gap: .65rem;
+    justify-content: flex-end;
+    white-space: nowrap;
+}
+
+.sign-out-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.app-main {
     min-width: 0;
 }
 
-.top-row {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.94);
-    border-bottom: 1px solid #dfe5ef;
-    display: flex;
-    gap: 1rem;
-    height: 64px;
-    justify-content: flex-end;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.top-status {
-    color: #5d6b82;
-    display: flex;
-    font-size: .92rem;
-    gap: .75rem;
-}
-
-.top-status span {
-    background: #eef3fb;
-    border: 1px solid #d9e2ef;
-    border-radius: 999px;
-    padding: .35rem .7rem;
-}
-
-.content {
+.app-content {
     padding: 0;
+}
+
+::deep .site-search {
+    max-width: 680px;
+}
+
+::deep .site-search .mud-input-root {
+    background: #f8fbff;
+    border-radius: 8px;
+    font-weight: 800;
+}
+
+::deep .site-search .mud-input-outlined-border {
+    border-color: #dfe7f2;
+}
+
+::deep .auth-button {
+    border-radius: 8px;
+    font-weight: 900;
+    letter-spacing: 0;
+    min-height: 42px;
+    text-transform: none;
+}
+
+::deep .register-button {
+    box-shadow: 0 5px 0 #3f9301;
+    color: #10210a;
+}
+
+::deep .register-button:hover {
+    transform: translateY(-1px);
 }
 
 #blazor-error-ui {
@@ -66,16 +97,28 @@ main {
 }
 
 @media (max-width: 900px) {
-    .page {
-        display: block;
+    .site-header-inner {
+        grid-template-columns: 1fr;
+        min-height: auto;
     }
 
-    .sidebar {
-        width: 100%;
+    .site-auth-actions {
+        justify-content: stretch;
     }
 
-    .top-row {
-        justify-content: space-between;
-        position: static;
+    .signed-in-actions {
+        flex-wrap: wrap;
+    }
+
+    ::deep .site-search {
+        max-width: none;
+    }
+
+    ::deep .auth-button {
+        flex: 1;
+    }
+
+    .sign-out-form {
+        flex: 1;
     }
 }

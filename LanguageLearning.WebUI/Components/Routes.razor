@@ -1,6 +1,32 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <LayoutView Layout="typeof(Layout.MainLayout)">
+                    <section class="app-section">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="auth-route-alert">
+                            Ban can dang nhap de xem trang nay.
+                        </MudAlert>
+                        <div class="auth-required-actions">
+                            <MudButton Href="auth?mode=login"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Login"
+                                       Class="duo-button">
+                                Dang nhap
+                            </MudButton>
+                            <MudButton Href="auth?mode=register"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Secondary"
+                                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                                       Class="duo-button secondary">
+                                Dang ky
+                            </MudButton>
+                        </div>
+                    </section>
+                </LayoutView>
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>

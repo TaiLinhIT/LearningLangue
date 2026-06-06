@@ -1,0 +1,10 @@
+<Project>
+  <Target Name="Build" Outputs="@(CollectedBuildOutput)">
+    <MSBuild
+      BuildInParallel="false"
+      Projects="@(ProjectReference)"
+      Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
+      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
+    </MSBuild>
+  </Target>
+</Project>

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="MudBlazor" Version="8.0.0" />
     <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
     <ProjectReference Include="..\LanguageLearning.Domain\LanguageLearning.Domain.csproj" />
     <ProjectReference Include="..\LanguageLearning.Persistence\LanguageLearning.Persistence.csproj" />
