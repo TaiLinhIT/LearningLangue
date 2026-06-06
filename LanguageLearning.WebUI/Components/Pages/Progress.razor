@@ -1,0 +1,37 @@
+@page "/progress"
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Theo doi tien do</h1>
+        <p>Bang dieu khien hoc tap: bai da hoc, diem so, streak, cap do hien tai va ky nang.</p>
+    </div>
+
+    @{
+        var progress = Catalog.GetProgress();
+    }
+
+    <div class="grid grid-4">
+        <div class="cardx stat"><span class="muted">Cap do</span><h3>@progress.CurrentLevel</h3></div>
+        <div class="cardx stat"><span class="muted">Bai da hoc</span><h3>@progress.LessonsCompleted/@progress.TotalLessons</h3></div>
+        <div class="cardx stat"><span class="muted">Diem TB</span><h3>@progress.AverageScore%</h3></div>
+        <div class="cardx stat"><span class="muted">Streak</span><h3>@progress.StreakDays ngay</h3></div>
+    </div>
+
+    <div class="grid grid-2 mt-4">
+        @foreach (var skill in progress.Skills)
+        {
+            <article class="cardx">
+                <div class="d-flex justify-content-between">
+                    <h3>@skill.Name</h3>
+                    <span class="pill">@skill.Progress%</span>
+                </div>
+                <p class="muted">@skill.Description</p>
+                <div class="progress">
+                    <div class="progress-bar" style="width:@skill.Progress%"></div>
+                </div>
+            </article>
+        }
+    </div>
+</section>
+

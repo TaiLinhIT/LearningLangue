@@ -1,0 +1,45 @@
+@page "/admin"
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Trang quan tri</h1>
+        <p>Dashboard mau cho admin quan ly nguoi dung, khoa hoc, bai hoc, tu vung, cau hoi, media va bao cao hoc tap.</p>
+    </div>
+
+    <div class="grid grid-4">
+        @foreach (var metric in Catalog.GetAdminMetrics())
+        {
+            <article class="cardx stat">
+                <span class="muted">@metric.Label</span>
+                <h3>@metric.Value</h3>
+                <p class="muted mb-0">@metric.Change</p>
+            </article>
+        }
+    </div>
+
+    <div class="grid grid-2 mt-4">
+        <article class="cardx">
+            <h3>Quan ly noi dung</h3>
+            <div class="table-responsive table-clean mt-3">
+                <table class="table">
+                    <thead><tr><th>Module</th><th>So luong</th><th>Trang thai</th></tr></thead>
+                    <tbody>
+                        <tr><td>Khoa hoc</td><td>36</td><td>Dang mo</td></tr>
+                        <tr><td>Bai hoc</td><td>428</td><td>Can duyet 12</td></tr>
+                        <tr><td>Tu vung</td><td>12.840</td><td>Da gan audio</td></tr>
+                        <tr><td>Cau hoi</td><td>5.420</td><td>Da phan cap do</td></tr>
+                        <tr><td>Audio/video</td><td>980</td><td>Dang xu ly 8</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="cardx">
+            <h3>Bao cao hoc tap</h3>
+            <p class="muted">Ty le hoan thanh bai hoc trong tuan nay dat 68%. Ky nang nghe co nhieu nguoi bo cuoc nhat, nen them bai ngan 3-5 phut.</p>
+            <button class="btn btn-primary">Xuat bao cao</button>
+        </article>
+    </div>
+</section>
+

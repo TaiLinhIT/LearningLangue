@@ -1,0 +1,27 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <div class="top-status">
+                <span>Streak 12 ngay</span>
+                <span>Cap do A2</span>
+            </div>
+            <a class="btn btn-sm btn-primary" href="auth">Dang nhap</a>
+        </div>
+
+        <article class="content">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    Da co loi xay ra.
+    <a href="" class="reload">Tai lai</a>
+    <a class="dismiss">x</a>
+</div>

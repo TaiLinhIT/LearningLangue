@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="LanguageLearning.API/LanguageLearning.API.csproj" />
+  <Project Path="LanguageLearning.Application/LanguageLearning.Application.csproj" />
+  <Project Path="LanguageLearning.Domain/LanguageLearning.Domain.csproj" />
+  <Project Path="LanguageLearning.Infrastructure/LanguageLearning.Infrastructure.csproj" />
+  <Project Path="LanguageLearning.Persistence/LanguageLearning.Persistence.csproj" />
+  <Project Path="LanguageLearning.WebUI/LanguageLearning.WebUI.csproj" />
+</Solution>

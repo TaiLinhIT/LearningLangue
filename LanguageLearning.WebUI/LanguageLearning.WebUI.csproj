@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
+    <ProjectReference Include="..\LanguageLearning.Domain\LanguageLearning.Domain.csproj" />
+    <ProjectReference Include="..\LanguageLearning.Persistence\LanguageLearning.Persistence.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

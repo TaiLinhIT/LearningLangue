@@ -1,0 +1,39 @@
+@page "/roadmap"
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Lo trinh hoc</h1>
+        <p>Chia theo cap do CEFR, chu de va ky nang de nguoi hoc di tu nen tang den ung dung.</p>
+    </div>
+
+    <div class="grid grid-3">
+        @foreach (var level in new[] { "A1", "A2", "B1", "B2", "C1" })
+        {
+            <article class="cardx">
+                <span class="pill">Cap do @level</span>
+                <h3 class="mt-3">Lo trinh @level</h3>
+                <p class="muted">Tu vung, ngu phap, nghe, noi, doc, viet va phat am theo muc @level.</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar" style="width:@(level == "A1" ? 100 : level == "A2" ? 68 : 22)%"></div>
+                </div>
+                <a class="btn btn-sm btn-outline-primary" href="lessons">Xem bai hoc</a>
+            </article>
+        }
+    </div>
+
+    <div class="section-title mt-5">
+        <h2>Ky nang trong lo trinh</h2>
+    </div>
+    <div class="grid grid-3">
+        @foreach (var skill in Catalog.GetProgress().Skills)
+        {
+            <article class="cardx">
+                <span class="pill">@skill.Icon</span>
+                <h3 class="mt-3">@skill.Name</h3>
+                <p class="muted">@skill.Description</p>
+            </article>
+        }
+    </div>
+</section>
+

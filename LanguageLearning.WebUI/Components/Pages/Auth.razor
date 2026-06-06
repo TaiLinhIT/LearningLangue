@@ -1,0 +1,57 @@
+@page "/auth"
+@rendermode InteractiveServer
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Dang ky / Dang nhap</h1>
+        <p>Tao tai khoan hoc tap, dang nhap lai va khoi phuc mat khau. Google/Facebook hien la nut tich hop mau de sau nay noi OAuth.</p>
+    </div>
+
+    <div class="grid grid-2 form-shell">
+        <div class="cardx">
+            <h3>Dang nhap</h3>
+            <label class="form-label mt-3">Email</label>
+            <input class="form-control" placeholder="ban@example.com" />
+            <label class="form-label mt-3">Mat khau</label>
+            <input class="form-control" type="password" placeholder="••••••••" />
+            <button class="btn btn-primary w-100 mt-4" @onclick="SignIn">Dang nhap</button>
+            <button class="btn btn-link w-100 mt-2" @onclick="ForgotPassword">Quen mat khau?</button>
+            <div class="d-grid gap-2 mt-2">
+                <button class="btn btn-outline-secondary">Dang nhap bang Google</button>
+                <button class="btn btn-outline-secondary">Dang nhap bang Facebook</button>
+            </div>
+        </div>
+
+        <div class="cardx">
+            <h3>Dang ky tai khoan</h3>
+            <label class="form-label mt-3">Ho ten</label>
+            <input class="form-control" placeholder="Nguyen Van A" />
+            <label class="form-label mt-3">Email</label>
+            <input class="form-control" placeholder="ban@example.com" />
+            <label class="form-label mt-3">Muc tieu hoc</label>
+            <select class="form-select">
+                <option>Giao tiep hang ngay</option>
+                <option>Thi chung chi</option>
+                <option>Cong viec</option>
+                <option>Du hoc</option>
+            </select>
+            <button class="btn btn-primary w-100 mt-4" @onclick="Register">Dang ky</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <div class="alert alert-success mt-3 form-shell">@Message</div>
+    }
+</section>
+
+@code {
+    private string? Message;
+
+    private void SignIn() => Message = "Dang nhap thanh cong voi tai khoan demo.";
+
+    private void ForgotPassword() => Message = "Da gui lien ket quen mat khau den email demo.";
+
+    private void Register() => Message = "Da tao tai khoan demo. Hay chon ngon ngu de hoc.";
+}
+

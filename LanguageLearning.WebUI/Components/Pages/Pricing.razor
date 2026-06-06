@@ -1,0 +1,48 @@
+@page "/pricing"
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Gia va thanh toan</h1>
+        <p>Trang gia, dang ky goi, thanh toan va quan ly goi hoc. Phan thanh toan hien la workflow demo de sau nay noi Stripe/VNPay/MoMo.</p>
+    </div>
+
+    <div class="grid grid-3">
+        @foreach (var plan in Catalog.GetPricingPlans())
+        {
+            <article class="cardx @(plan.Highlighted ? "highlight" : "")">
+                <span class="pill">@plan.Name</span>
+                <h3 class="mt-3">@plan.Price</h3>
+                <p class="muted">@plan.Description</p>
+                <ul>
+                    @foreach (var feature in plan.Features)
+                    {
+                        <li>@feature</li>
+                    }
+                </ul>
+                <button class="btn @(plan.Highlighted ? "btn-primary" : "btn-outline-primary") w-100">Dang ky goi</button>
+            </article>
+        }
+    </div>
+
+    <div class="cardx mt-4 form-shell">
+        <h3>Thong tin thanh toan demo</h3>
+        <div class="grid grid-2">
+            <div>
+                <label class="form-label">Ten chu the</label>
+                <input class="form-control" placeholder="NGUYEN VAN A" />
+            </div>
+            <div>
+                <label class="form-label">Phuong thuc</label>
+                <select class="form-select">
+                    <option>The noi dia/quoc te</option>
+                    <option>VNPay</option>
+                    <option>MoMo</option>
+                    <option>Chuyen khoan</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-primary mt-3">Thanh toan</button>
+    </div>
+</section>
+

@@ -1,0 +1,86 @@
+@page "/lesson/{Id:int}"
+@rendermode InteractiveServer
+@inject ILearningCatalogService Catalog
+
+@if (Lesson is null)
+{
+    <section class="app-section">
+        <div class="alert alert-warning">Khong tim thay bai hoc.</div>
+    </section>
+}
+else
+{
+    <section class="app-section">
+        <div class="section-title">
+            <span class="pill">@Lesson.Level - @Lesson.Skill</span>
+            <h1 class="mt-2">@Lesson.Title</h1>
+            <p>@Lesson.Summary</p>
+        </div>
+
+        <div class="grid grid-2">
+            <article class="cardx">
+                <h3>Noi dung hoc</h3>
+                <p>Phan nay co the mo rong thanh video, audio that, Markdown lesson content hoac CMS.</p>
+                <h3 class="mt-4">Vi du</h3>
+                <ul>
+                    @foreach (var example in Lesson.Examples)
+                    {
+                        <li>@example</li>
+                    }
+                </ul>
+                <div class="alert alert-secondary mt-3">Audio mau: 00:24 - giong doc ban xu, toc do cham.</div>
+            </article>
+
+            <article class="cardx">
+                <h3>Luyen tap</h3>
+                @for (var i = 0; i < Lesson.Questions.Count; i++)
+                {
+                    var index = i;
+                    var question = Lesson.Questions[index];
+                    <div class="mb-3">
+                        <strong>@question.Prompt</strong>
+                        <div class="grid mt-2">
+                            @for (var j = 0; j < question.Options.Count; j++)
+                            {
+                                var optionIndex = j;
+                                var css = GetAnswerClass(index, optionIndex, question.CorrectIndex);
+                                <button class="answer-button @css" @onclick="() => Answers[index] = optionIndex">@question.Options[optionIndex]</button>
+                            }
+                        </div>
+                        @if (Answers.ContainsKey(index))
+                        {
+                            <p class="muted mt-2">@question.Explanation</p>
+                        }
+                    </div>
+                }
+            </article>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Lesson? Lesson;
+    private Dictionary<int, int> Answers = [];
+
+    protected override void OnParametersSet()
+    {
+        Lesson = Catalog.GetLesson(Id);
+    }
+
+    private string GetAnswerClass(int questionIndex, int optionIndex, int correctIndex)
+    {
+        if (!Answers.TryGetValue(questionIndex, out var selected))
+        {
+            return string.Empty;
+        }
+
+        if (optionIndex == correctIndex)
+        {
+            return "correct";
+        }
+
+        return selected == optionIndex ? "wrong" : string.Empty;
+    }
+}
+

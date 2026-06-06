@@ -1,0 +1,54 @@
+@page "/quiz"
+@rendermode InteractiveServer
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Bai tap va kiem tra</h1>
+        <p>Quiz cuoi bai/chuong, cham diem tu dong va hien giai thich.</p>
+    </div>
+
+    <div class="cardx form-shell">
+        @foreach (var item in QuizItems.Select((Question, Index) => new { Question, Index }))
+        {
+            <div class="mb-4">
+                <h3>@(item.Index + 1). @item.Question.Prompt</h3>
+                <div class="grid grid-2">
+                    @for (var i = 0; i < item.Question.Options.Count; i++)
+                    {
+                        var optionIndex = i;
+                        <button class="answer-button @(Answers.GetValueOrDefault(item.Index, -1) == optionIndex ? "selected" : "")"
+                                @onclick="() => Answers[item.Index] = optionIndex">
+                            @item.Question.Options[optionIndex]
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        <button class="btn btn-primary" @onclick="Submit">Nop bai</button>
+    </div>
+
+    @if (Submitted)
+    {
+        <div class="alert alert-success mt-3 form-shell">Diem: @Score/@QuizItems.Count. He thong da luu vao tien do hoc tap demo.</div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<PracticeQuestion> QuizItems = [];
+    private Dictionary<int, int> Answers = [];
+    private bool Submitted;
+    private int Score;
+
+    protected override void OnInitialized()
+    {
+        QuizItems = Catalog.GetLessons().SelectMany(lesson => lesson.Questions).Take(5).ToList();
+    }
+
+    private void Submit()
+    {
+        Score = QuizItems.Where((question, index) => Answers.TryGetValue(index, out var answer) && answer == question.CorrectIndex).Count();
+        Submitted = true;
+    }
+}
+
