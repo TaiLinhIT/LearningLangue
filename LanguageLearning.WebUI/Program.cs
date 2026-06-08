@@ -4,18 +4,16 @@ using LanguageLearning.Application.Abstractions;
 using LanguageLearning.Infrastructure;
 using LanguageLearning.Infrastructure.Data;
 using LanguageLearning.WebUI.Components;
-using LanguageLearning.Persistence;
 using LanguageLearning.WebUI.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MudBlazor.Services;
-using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
 builder.Services.AddSingleton<ILearningAuthService, InMemoryLearningAuthService>();
 builder.Services.AddCascadingAuthenticationState();

@@ -2,9 +2,16 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
     <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
     <ProjectReference Include="..\LanguageLearning.Domain\LanguageLearning.Domain.csproj" />
+    <ProjectReference Include="..\LanguageLearning.Infrastructure\LanguageLearning.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- These legacy demo catalog files target the old synchronous domain model. -->
+    <Compile Remove="DatabaseLearningCatalogService.cs" />
+    <Compile Remove="Data\DatabaseSeeder.cs" />
   </ItemGroup>
 
   <PropertyGroup>

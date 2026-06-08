@@ -1,4 +1,5 @@
-using LanguageLearning.Application.Abstractions;
+using LanguageLearning.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LanguageLearning.Persistence;
@@ -7,7 +8,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddSingleton<ILearningCatalogService, DemoLearningCatalogService>();
-        return services;
+        return services.AddInfrastructure(configuration);
     }
 }

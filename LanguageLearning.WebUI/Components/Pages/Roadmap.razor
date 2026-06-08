@@ -10,10 +10,10 @@
     <div class="grid grid-2">
         <article class="cardx">
             <span class="pill green">Dang hoc</span>
-            <h3 class="mt-3">English A2 Sprint</h3>
-            <p class="muted">Tap trung giao tiep cong viec, nghe ngan va tu vung moi ngay.</p>
+            <h3 class="mt-3">@(_activeCourse?.Title ?? "English Starter Path")</h3>
+            <p class="muted">@(_activeCourse?.Description ?? "Tap trung giao tiep cong viec, nghe ngan va tu vung moi ngay.")</p>
             <div class="progress mb-3">
-                <div class="progress-bar" style="width:68%"></div>
+                <div class="progress-bar" style="width:@GetDashboardProgress()%"></div>
             </div>
             <a class="btn btn-primary" href="lessons">Tiep tuc</a>
         </article>
@@ -22,9 +22,9 @@
             <h3 class="mt-3">5 ngay lien tiep</h3>
             <p class="muted">Hoan thanh it nhat mot quiz moi ngay de nhan bonus XP.</p>
             <div class="mini-stat-grid">
-                <div class="mini-stat"><strong>12</strong><span class="muted">Streak</span></div>
-                <div class="mini-stat"><strong>247</strong><span class="muted">Tu</span></div>
-                <div class="mini-stat"><strong>86%</strong><span class="muted">Score</span></div>
+                <div class="mini-stat"><strong>@(_summary?.CurrentStreak ?? 0)</strong><span class="muted">Streak</span></div>
+                <div class="mini-stat"><strong>@(_summary?.XP ?? 0)</strong><span class="muted">XP</span></div>
+                <div class="mini-stat"><strong>@(_summary?.AverageScore ?? 0)%</strong><span class="muted">Score</span></div>
             </div>
         </article>
     </div>
@@ -34,20 +34,77 @@
     </div>
 
     <div class="lesson-path">
-        @foreach (var skill in Catalog.GetProgress().Skills)
+        @if (_isLoading)
         {
-            var dotClass = skill.Progress > 65 ? "" : skill.Progress > 45 ? "blue" : "yellow";
-            <article class="cardx lesson-node">
-                <span class="lesson-dot @dotClass">@skill.Icon</span>
-                <div>
-                    <h3 class="mb-1">@skill.Name</h3>
-                    <p class="muted mb-2">@skill.Description</p>
-                    <div class="progress">
-                        <div class="progress-bar" style="width:@skill.Progress%"></div>
+            <div class="loading-state">Dang tai lo trinh...</div>
+        }
+        else if (_skillPath.Count == 0)
+        {
+            <div class="empty-state">Chua co lo trinh bai hoc.</div>
+        }
+        else
+        {
+            @foreach (var skill in _skillPath)
+            {
+                var dotClass = skill.Progress > 65 ? "" : skill.Progress > 45 ? "blue" : "yellow";
+                <article class="cardx lesson-node">
+                    <span class="lesson-dot @dotClass">@skill.Icon</span>
+                    <div>
+                        <h3 class="mb-1">@skill.Name</h3>
+                        <p class="muted mb-2">@skill.Description</p>
+                        <div class="progress">
+                            <div class="progress-bar" style="width:@skill.Progress%"></div>
+                        </div>
                     </div>
-                </div>
-                <a class="btn btn-outline-primary" href="lessons">Luyen</a>
-            </article>
+                    <a class="btn btn-outline-primary" href="lessons">Luyen</a>
+                </article>
+            }
         }
     </div>
 </section>
+
+@code {
+    private bool _isLoading = true;
+    private Course? _activeCourse;
+    private DashboardSummary? _summary;
+    private IReadOnlyList<SkillPathItem> _skillPath = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var courses = await Catalog.GetCoursesAsync();
+        _activeCourse = courses.FirstOrDefault();
+        _summary = await Catalog.GetDashboardAsync(2);
+        _skillPath = courses
+            .SelectMany(course => course.Units.SelectMany(unit => unit.Lessons))
+            .GroupBy(lesson => lesson.LessonType)
+            .Select((group, index) => new SkillPathItem(
+                group.Key,
+                GetSkillIcon(group.Key),
+                Math.Min(95, 40 + (group.Count() * 12) + (index * 6)),
+                $"{group.Count()} bai hoc dang san sang"))
+            .ToList();
+        _isLoading = false;
+    }
+
+    private int GetDashboardProgress()
+    {
+        if (_summary is null || _summary.LessonsCompleted == 0)
+        {
+            return 35;
+        }
+
+        return Math.Clamp(_summary.LessonsCompleted * 20, 35, 95);
+    }
+
+    private static string GetSkillIcon(string lessonType) =>
+        lessonType switch
+        {
+            LessonTypes.Vocabulary => "Aa",
+            LessonTypes.Grammar => "Gr",
+            LessonTypes.Speaking => "Sp",
+            LessonTypes.Listening => "Li",
+            _ => "XP"
+        };
+
+    private sealed record SkillPathItem(string Name, string Icon, int Progress, string Description);
+}

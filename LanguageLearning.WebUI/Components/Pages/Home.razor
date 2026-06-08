@@ -3,11 +3,10 @@
 @inject ILearningCatalogService Catalog
 
 @{
-    var progress = Catalog.GetProgress();
-    var lessons = Catalog.GetLessons().ToList();
-    var recommendedLessons = lessons.Take(6).ToList();
-    var freeCount = lessons.Count(lesson => !lesson.IsPremium);
-    var premiumCount = lessons.Count(lesson => lesson.IsPremium);
+    var progress = _summary ?? new DashboardSummary(0, 0, 0, 0, 0);
+    var recommendedCourses = _courses.Take(6).ToList();
+    var freeCount = _courses.Count(course => !IsPremiumCourse(course));
+    var premiumCount = _courses.Count(IsPremiumCourse);
 }
 
 <div class="home-page">
@@ -47,7 +46,7 @@
                         </div>
                         <div class="streak-card">
                             <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" />
-                            <strong>@progress.StreakDays ngay</strong>
+                            <strong>@progress.CurrentStreak ngay</strong>
                             <span>streak dang chay</span>
                         </div>
                     </div>
@@ -141,30 +140,30 @@
         </div>
 
         <div class="course-grid">
-            @foreach (var lesson in recommendedLessons)
+            @foreach (var course in recommendedCourses)
             {
-                var isPremium = lesson.IsPremium;
-                var progressValue = GetCourseProgress(lesson);
+                var isPremium = IsPremiumCourse(course);
+                var progressValue = GetCourseProgress(course);
 
-                <MudPaper Elevation="0" Class="@($"course-card {GetCourseTone(lesson)} {(isPremium ? "premium" : "free")}")">
+                <MudPaper Elevation="0" Class="@($"course-card {GetCourseTone(course)} {(isPremium ? "premium" : "free")}")">
                     <div class="course-topline">
                         <span class="course-tag @(isPremium ? "premium" : "free")">
                             <MudIcon Icon="@(isPremium ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)" Size="Size.Small" />
                             @(isPremium ? "Tra phi" : "Mien phi")
                         </span>
-                        <span class="level-pill">@lesson.Level</span>
+                        <span class="level-pill">@course.Level</span>
                     </div>
 
                     <div class="course-token">
-                        <MudIcon Icon="@GetCourseIcon(lesson)" />
+                        <MudIcon Icon="@GetCourseIcon(course)" />
                     </div>
 
-                    <h3>@lesson.Title</h3>
-                    <p>@lesson.Summary</p>
+                    <h3>@course.Title</h3>
+                    <p>@course.Description</p>
 
                     <div class="course-meta">
-                        <span><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> @lesson.DurationMinutes phut</span>
-                        <span><MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" /> @GetLanguageName(lesson.LanguageCode)</span>
+                        <span><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> @GetLessonCount(course) bai</span>
+                        <span><MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" /> @GetLanguageName(course)</span>
                     </div>
 
                     <MudProgressLinear Value="@progressValue"
@@ -173,13 +172,13 @@
                                        Class="course-progress" />
 
                     <div class="course-footer">
-                        <strong>@lesson.Skill</strong>
-                        <MudButton Href="@($"lesson/{lesson.Id}")"
+                        <strong>@GetCourseFocus(course)</strong>
+                        <MudButton Href="@($"course/{course.Id}")"
                                    Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    EndIcon="@Icons.Material.Filled.ArrowForward"
                                    Class="course-button">
-                            Hoc ngay
+                            Xem khoa
                         </MudButton>
                     </div>
                 </MudPaper>
@@ -196,48 +195,59 @@
         new("Facebook", "https://www.facebook.com/learninglangue", Icons.Material.Filled.ThumbUp)
     ];
 
-    private static int GetCourseProgress(Lesson lesson) =>
-        lesson.Id switch
+    private DashboardSummary? _summary;
+    private IReadOnlyList<Course> _courses = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _summary = await Catalog.GetDashboardAsync(2);
+        _courses = await Catalog.GetCoursesAsync();
+    }
+
+    private static bool IsPremiumCourse(Course course) =>
+        !string.Equals(course.Level, "A1", StringComparison.OrdinalIgnoreCase);
+
+    private static int GetCourseProgress(Course course) =>
+        course.Id switch
         {
             1 => 84,
             2 => 68,
             3 => 46,
-            4 => 58,
-            5 => 72,
             _ => 52
         };
 
-    private static string GetCourseTone(Lesson lesson) =>
-        lesson.LanguageCode switch
+    private static string GetCourseTone(Course course) =>
+        course.Language?.Code switch
         {
             "ja" => "tone-coral",
             "ko" => "tone-blue",
             "zh" => "tone-yellow",
             "fr" => "tone-indigo",
-            _ => lesson.IsPremium ? "tone-indigo" : "tone-green"
+            _ => IsPremiumCourse(course) ? "tone-indigo" : "tone-green"
         };
 
-    private static string GetCourseIcon(Lesson lesson) =>
-        lesson.Skill switch
+    private static string GetCourseIcon(Course course) =>
+        GetCourseFocus(course) switch
         {
-            "Tu vung" => Icons.Material.Filled.Translate,
-            "Ngu phap" => Icons.Material.Filled.EditNote,
-            "Doc" => Icons.Material.Filled.MenuBook,
-            "Phat am" => Icons.Material.Filled.RecordVoiceOver,
-            "Nghe" => Icons.Material.Filled.Headphones,
+            LessonTypes.Vocabulary => Icons.Material.Filled.Translate,
+            LessonTypes.Grammar => Icons.Material.Filled.EditNote,
+            LessonTypes.Speaking => Icons.Material.Filled.RecordVoiceOver,
+            LessonTypes.Listening => Icons.Material.Filled.Headphones,
             _ => Icons.Material.Filled.School
         };
 
-    private static string GetLanguageName(string code) =>
-        code switch
-        {
-            "en" => "Tieng Anh",
-            "ja" => "Tieng Nhat",
-            "ko" => "Tieng Han",
-            "zh" => "Tieng Trung",
-            "fr" => "Tieng Phap",
-            _ => code.ToUpperInvariant()
-        };
+    private static int GetLessonCount(Course course) =>
+        course.Units.Sum(unit => unit.Lessons.Count);
+
+    private static string GetCourseFocus(Course course) =>
+        course.Units
+            .OrderBy(unit => unit.SortOrder)
+            .SelectMany(unit => unit.Lessons.OrderBy(lesson => lesson.SortOrder))
+            .Select(lesson => lesson.LessonType)
+            .FirstOrDefault() ?? course.Level;
+
+    private static string GetLanguageName(Course course) =>
+        course.Language?.Name ?? "Ngon ngu";
 
     private sealed record SocialLink(string Name, string Url, string Icon);
 }

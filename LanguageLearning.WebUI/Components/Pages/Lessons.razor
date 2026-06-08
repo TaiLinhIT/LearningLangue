@@ -7,25 +7,60 @@
         <p>Chon mot bai ngan, kiem tra nhanh va tich XP vao muc tieu ngay.</p>
     </div>
 
-    <div class="grid">
-        @foreach (var lesson in Catalog.GetLessons())
+    @if (_isLoading)
+    {
+        <div class="loading-state">Dang tai bai hoc...</div>
+    }
+    else if (_lessonCards.Count == 0)
+    {
+        <div class="empty-state">Chua co bai hoc nao duoc xuat ban.</div>
+    }
+    else
+    {
+        <div class="grid">
+        @foreach (var card in _lessonCards)
         {
+            var lesson = card.Lesson;
             <article class="cardx lesson-row">
                 <div>
                     <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span class="pill green">@lesson.Level</span>
-                        <span class="pill">@lesson.Skill</span>
-                        <span class="pill yellow">@lesson.DurationMinutes phut</span>
-                        @if (lesson.IsPremium)
+                        <span class="pill green">@card.Course.Level</span>
+                        <span class="pill">@lesson.LessonType</span>
+                        <span class="pill yellow">@lesson.XPReward XP</span>
+                        @if (lesson.IsLocked)
                         {
-                            <span class="pill">Plus</span>
+                            <span class="pill">Locked</span>
                         }
                     </div>
                     <h3>@lesson.Title</h3>
-                    <p class="muted mb-0">@lesson.Summary</p>
+                    <p class="muted mb-0">@lesson.Description</p>
+                    <p class="muted mb-0">@card.Course.Title - @card.Unit.Title</p>
                 </div>
-                <a class="btn btn-primary" href="lesson/@lesson.Id">Hoc ngay</a>
+                <a class="btn @(lesson.IsLocked ? "btn-light disabled" : "btn-primary")" href="lesson/@lesson.Id">
+                    @(lesson.IsLocked ? "Da khoa" : "Hoc ngay")
+                </a>
             </article>
         }
-    </div>
+        </div>
+    }
 </section>
+
+@code {
+    private bool _isLoading = true;
+    private IReadOnlyList<LessonCard> _lessonCards = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var courses = await Catalog.GetCoursesAsync();
+        _lessonCards = courses
+            .SelectMany(course => course.Units
+                .OrderBy(unit => unit.SortOrder)
+                .SelectMany(unit => unit.Lessons
+                    .OrderBy(lesson => lesson.SortOrder)
+                    .Select(lesson => new LessonCard(lesson, unit, course))))
+            .ToList();
+        _isLoading = false;
+    }
+
+    private sealed record LessonCard(Lesson Lesson, Unit Unit, Course Course);
+}
