@@ -4,5 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Work around local MSBuild/restore graph failures when project references run in parallel. -->
+    <BuildInParallel>false</BuildInParallel>
+    <RestoreBuildInParallel>false</RestoreBuildInParallel>
   </PropertyGroup>
 </Project>

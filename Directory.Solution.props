@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Keep solution restore stable on machines where parallel MSBuild graph evaluation exits silently. -->
+    <RestoreBuildInParallel>false</RestoreBuildInParallel>
+  </PropertyGroup>
+</Project>

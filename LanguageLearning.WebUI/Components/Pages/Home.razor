@@ -2,57 +2,242 @@
 @page "/about"
 @inject ILearningCatalogService Catalog
 
-<section class="hero app-section">
-    <div class="hero-copy">
-        <span class="pill">AI-ready language learning platform</span>
-        <h1>LinguaFlow</h1>
-        <p>Learn languages with joyful lessons, quizzes, XP, streaks, flashcards, speaking and listening practice, and a clear admin studio for content teams.</p>
-        <div class="hero-actions">
-            <a class="btn btn-primary btn-lg" href="/register">Start free</a>
-            <a class="btn btn-light btn-lg" href="/courses">Explore courses</a>
-        </div>
-    </div>
-</section>
+@{
+    var progress = Catalog.GetProgress();
+    var lessons = Catalog.GetLessons().ToList();
+    var recommendedLessons = lessons.Take(6).ToList();
+    var freeCount = lessons.Count(lesson => !lesson.IsPremium);
+    var premiumCount = lessons.Count(lesson => lesson.IsPremium);
+}
 
-<section class="app-section">
-    <div class="section-title">
-        <h2>Choose a language</h2>
-        <p>Friendly learning paths by level, unit, lesson type, and practice mode.</p>
-    </div>
-    @if (_languages is null)
-    {
-        <div class="loading-state">Loading languages...</div>
-    }
-    else
-    {
-        <div class="grid grid-3">
-            @foreach (var language in _languages)
-            {
-                <article class="cardx language-card">
-                    <span class="flag">@language.FlagIcon</span>
-                    <h3>@language.Name</h3>
-                    <p class="muted">Course catalog, placement test, vocabulary, listening, speaking, and grammar practice.</p>
-                    <a href="/courses">View courses</a>
+<div class="home-page">
+    <section class="banner-section" aria-label="Quang cao khoa hoc">
+        <div class="banner-window">
+            <div class="ad-slider">
+                <article class="ad-slide ad-slide-green">
+                    <div class="banner-copy">
+                        <span class="eyebrow">LinguaFlow Plus</span>
+                        <h1>Hoc ngon ngu moi ngay voi cac bai ngan cuc vui</h1>
+                        <p>Mo khoa lo trinh A1 den B1, quiz nhanh, streak va diem XP de viec hoc nhe nhu mot van choi.</p>
+                        <div class="banner-actions">
+                            <MudButton Href="lessons"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       Class="duo-button">
+                                Bat dau hoc
+                            </MudButton>
+                            <MudButton Href="placement-test"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Secondary"
+                                       Size="Size.Large"
+                                       Class="duo-button secondary">
+                                Test dau vao
+                            </MudButton>
+                        </div>
+                    </div>
+
+                    <div class="banner-visual" aria-hidden="true">
+                        <div class="lesson-orbit">
+                            <span class="orbit-token token-main">LF</span>
+                            <span class="orbit-token token-small token-blue">A1</span>
+                            <span class="orbit-token token-small token-yellow">XP</span>
+                            <span class="orbit-token token-small token-coral">B1</span>
+                        </div>
+                        <div class="streak-card">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" />
+                            <strong>@progress.StreakDays ngay</strong>
+                            <span>streak dang chay</span>
+                        </div>
+                    </div>
                 </article>
+
+                <article class="ad-slide ad-slide-blue">
+                    <div class="banner-copy">
+                        <span class="eyebrow">Theo doi chung toi</span>
+                        <h2>Video ngan moi ngay tren TikTok, YouTube va Facebook</h2>
+                        <p>Hoc phat am, cau giao tiep va meo ghi nho tu vung bang cac clip gon, nhanh, de xem lai.</p>
+                        <div class="social-row">
+                            @foreach (var social in SocialLinks)
+                            {
+                                <a class="social-link" href="@social.Url" target="_blank" rel="noopener">
+                                    <MudIcon Icon="@social.Icon" Size="Size.Small" />
+                                    <span>@social.Name</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="video-stack" aria-hidden="true">
+                        <div class="video-card active">
+                            <MudIcon Icon="@Icons.Material.Filled.MusicNote" />
+                            <strong>60s Speaking</strong>
+                            <span>Clip moi moi ngay</span>
+                        </div>
+                        <div class="video-card">
+                            <MudIcon Icon="@Icons.Material.Filled.OndemandVideo" />
+                            <strong>Lesson Shorts</strong>
+                            <span>Bai hoc ngan</span>
+                        </div>
+                        <div class="video-card">
+                            <MudIcon Icon="@Icons.Material.Filled.ThumbUp" />
+                            <strong>Community</strong>
+                            <span>Hoi dap nhanh</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ad-slide ad-slide-yellow">
+                    <div class="banner-copy">
+                        <span class="eyebrow">Khoa hoc moi</span>
+                        <h2>Chon mien phi truoc, nang cap Plus khi can luyen sau hon</h2>
+                        <p>Co @freeCount khoa mien phi de bat dau va @premiumCount khoa Plus cho ngu phap, nghe noi va lo trinh nang cao.</p>
+                        <div class="banner-actions">
+                            <MudButton Href="pricing"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.Star"
+                                       Class="duo-button">
+                                Xem goi hoc
+                            </MudButton>
+                            <MudButton Href="roadmap"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Secondary"
+                                       Size="Size.Large"
+                                       Class="duo-button secondary">
+                                Xem lo trinh
+                            </MudButton>
+                        </div>
+                    </div>
+
+                    <div class="pricing-preview" aria-hidden="true">
+                        <div class="price-tile free">
+                            <span>Mien phi</span>
+                            <strong>@freeCount khoa</strong>
+                        </div>
+                        <div class="price-tile plus">
+                            <span>Plus</span>
+                            <strong>@premiumCount khoa</strong>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <div class="slider-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </section>
+
+    <section class="app-section recommended-section">
+        <div class="section-title home-title">
+            <span class="eyebrow">Danh cho ban</span>
+            <h2>Khoa hoc phu hop hom nay</h2>
+            <p>Card khoa hoc duoc sap xep de ban co the bat dau mien phi, sau do nang cap khi muon luyen sau hon.</p>
+        </div>
+
+        <div class="course-grid">
+            @foreach (var lesson in recommendedLessons)
+            {
+                var isPremium = lesson.IsPremium;
+                var progressValue = GetCourseProgress(lesson);
+
+                <MudPaper Elevation="0" Class="@($"course-card {GetCourseTone(lesson)} {(isPremium ? "premium" : "free")}")">
+                    <div class="course-topline">
+                        <span class="course-tag @(isPremium ? "premium" : "free")">
+                            <MudIcon Icon="@(isPremium ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)" Size="Size.Small" />
+                            @(isPremium ? "Tra phi" : "Mien phi")
+                        </span>
+                        <span class="level-pill">@lesson.Level</span>
+                    </div>
+
+                    <div class="course-token">
+                        <MudIcon Icon="@GetCourseIcon(lesson)" />
+                    </div>
+
+                    <h3>@lesson.Title</h3>
+                    <p>@lesson.Summary</p>
+
+                    <div class="course-meta">
+                        <span><MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> @lesson.DurationMinutes phut</span>
+                        <span><MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" /> @GetLanguageName(lesson.LanguageCode)</span>
+                    </div>
+
+                    <MudProgressLinear Value="@progressValue"
+                                       Color="Color.Primary"
+                                       Rounded="true"
+                                       Class="course-progress" />
+
+                    <div class="course-footer">
+                        <strong>@lesson.Skill</strong>
+                        <MudButton Href="@($"lesson/{lesson.Id}")"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   EndIcon="@Icons.Material.Filled.ArrowForward"
+                                   Class="course-button">
+                            Hoc ngay
+                        </MudButton>
+                    </div>
+                </MudPaper>
             }
         </div>
-    }
-</section>
-
-<section class="app-section pt-0">
-    <div class="grid grid-4">
-        <div class="cardx stat"><strong>Placement</strong><span>Goal, language, and level test</span></div>
-        <div class="cardx stat"><strong>Practice</strong><span>Vocabulary, listening, speaking, grammar</span></div>
-        <div class="cardx stat"><strong>Motivation</strong><span>XP, streak, badges, leaderboard</span></div>
-        <div class="cardx stat"><strong>Admin</strong><span>CRUD content, publish, reports</span></div>
-    </div>
-</section>
+    </section>
+</div>
 
 @code {
-    private IReadOnlyList<Language>? _languages;
+    private static readonly IReadOnlyList<SocialLink> SocialLinks =
+    [
+        new("TikTok", "https://www.tiktok.com/@learninglangue", Icons.Material.Filled.MusicNote),
+        new("YouTube", "https://www.youtube.com/@learninglangue", Icons.Material.Filled.OndemandVideo),
+        new("Facebook", "https://www.facebook.com/learninglangue", Icons.Material.Filled.ThumbUp)
+    ];
 
-    protected override async Task OnInitializedAsync()
-    {
-        _languages = await Catalog.GetLanguagesAsync();
-    }
+    private static int GetCourseProgress(Lesson lesson) =>
+        lesson.Id switch
+        {
+            1 => 84,
+            2 => 68,
+            3 => 46,
+            4 => 58,
+            5 => 72,
+            _ => 52
+        };
+
+    private static string GetCourseTone(Lesson lesson) =>
+        lesson.LanguageCode switch
+        {
+            "ja" => "tone-coral",
+            "ko" => "tone-blue",
+            "zh" => "tone-yellow",
+            "fr" => "tone-indigo",
+            _ => lesson.IsPremium ? "tone-indigo" : "tone-green"
+        };
+
+    private static string GetCourseIcon(Lesson lesson) =>
+        lesson.Skill switch
+        {
+            "Tu vung" => Icons.Material.Filled.Translate,
+            "Ngu phap" => Icons.Material.Filled.EditNote,
+            "Doc" => Icons.Material.Filled.MenuBook,
+            "Phat am" => Icons.Material.Filled.RecordVoiceOver,
+            "Nghe" => Icons.Material.Filled.Headphones,
+            _ => Icons.Material.Filled.School
+        };
+
+    private static string GetLanguageName(string code) =>
+        code switch
+        {
+            "en" => "Tieng Anh",
+            "ja" => "Tieng Nhat",
+            "ko" => "Tieng Han",
+            "zh" => "Tieng Trung",
+            "fr" => "Tieng Phap",
+            _ => code.ToUpperInvariant()
+        };
+
+    private sealed record SocialLink(string Name, string Url, string Icon);
 }

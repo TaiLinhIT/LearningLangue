@@ -12,4 +12,5 @@ dotnet run --project LanguageLearning.WebUI\LanguageLearning.WebUI.csproj --laun
 ```
 
 Website URL: `http://localhost:5018`.
+API Swagger URL: `http://localhost:5088/swagger`.
 # LearningLangue

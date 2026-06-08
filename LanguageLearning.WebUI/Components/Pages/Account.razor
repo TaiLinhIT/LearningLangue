@@ -1,0 +1,121 @@
+@page "/account"
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="authContext">
+        @{
+            var user = authContext.User;
+            var statusMessage = GetStatusMessage();
+            var displayName = user.Identity?.Name ?? "Nguoi hoc";
+            var email = user.FindFirstValue(ClaimTypes.Email) ?? "email chua cap nhat";
+            var learningGoal = user.FindFirstValue("learning_goal") ?? "Giao tiep hang ngay";
+        }
+
+        <section class="app-section account-page">
+            @if (!string.IsNullOrWhiteSpace(statusMessage))
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="auth-message">
+                    @statusMessage
+                </MudAlert>
+            }
+
+            <div class="account-hero">
+                <div class="account-avatar">
+                    @GetInitials(displayName)
+                </div>
+                <div>
+                    <span class="eyebrow">Ho so hoc tap</span>
+                    <h1>@displayName</h1>
+                    <p>@email</p>
+                </div>
+                <form method="post" action="/auth/sign-out" class="account-sign-out">
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.Logout"
+                               Class="duo-button secondary">
+                        Dang xuat
+                    </MudButton>
+                </form>
+            </div>
+
+            <div class="grid grid-2 account-grid">
+                <MudPaper Elevation="0" Class="account-card">
+                    <div class="auth-card-header">
+                        <div class="auth-icon green">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                        </div>
+                        <div>
+                            <h2>Thong tin ca nhan</h2>
+                            <p>Thong tin nay duoc tao tu luc dang ky tai khoan.</p>
+                        </div>
+                    </div>
+
+                    <label class="auth-label">Ho ten</label>
+                    <input class="auth-input" value="@displayName" readonly />
+
+                    <label class="auth-label">Email</label>
+                    <input class="auth-input" value="@email" readonly />
+
+                    <label class="auth-label">Muc tieu hoc</label>
+                    <input class="auth-input" value="@learningGoal" readonly />
+                </MudPaper>
+
+                <MudPaper Elevation="0" Class="account-card progress-card">
+                    <div class="auth-card-header">
+                        <div class="auth-icon blue">
+                            <MudIcon Icon="@Icons.Material.Filled.Bolt" />
+                        </div>
+                        <div>
+                            <h2>Lich su hoc tap</h2>
+                            <p>Tien do demo se gan voi tai khoan dang nhap.</p>
+                        </div>
+                    </div>
+
+                    <div class="learning-history">
+                        <div>
+                            <strong>Hoan thanh</strong>
+                            <span>Chao hoi va gioi thieu ban than</span>
+                        </div>
+                        <div>
+                            <strong>Quiz gan nhat</strong>
+                            <span>Cong viec: 8/10</span>
+                        </div>
+                        <div>
+                            <strong>Flashcard</strong>
+                            <span>On 24 tu vung</span>
+                        </div>
+                        <div>
+                            <strong>Streak</strong>
+                            <span>12 ngay</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+        </section>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
+
+    private string? GetStatusMessage() =>
+        Status switch
+        {
+            "registered" => "Dang ky thanh cong. Tai khoan cua ban da san sang.",
+            "signed-in" => "Dang nhap thanh cong. Chao mung ban quay lai.",
+            _ => null
+        };
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            return "LL";
+        }
+
+        return string.Concat(parts.Take(2).Select(part => char.ToUpperInvariant(part[0])));
+    }
+}

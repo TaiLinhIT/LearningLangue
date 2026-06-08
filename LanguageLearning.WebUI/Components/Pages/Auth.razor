@@ -2,35 +2,205 @@
 @page "/auth"
 @inject NavigationManager Navigation
 
-<section class="auth-page">
-    <div class="auth-panel">
-        <span class="pill">Welcome back</span>
-        <h1>Login</h1>
-        @if (HasError)
-        {
-            <div class="error-state">Email or password is incorrect.</div>
-        }
-        <form method="post" action="/account/login" class="form-stack">
-            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
-            <label>Email<input name="email" type="email" value="@Email" required /></label>
-            <label>Password<input name="password" type="password" required /></label>
-            <button class="btn btn-primary btn-lg" type="submit">Login</button>
-        </form>
-        <p class="muted">Demo admin: admin@linguaflow.local / Admin@123</p>
-        <p class="muted">Demo learner: learner@linguaflow.local / Learner@123</p>
-        <a href="/register">Create a learner account</a>
-    </div>
+<section class="app-section auth-page">
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            <MudPaper Elevation="0" Class="auth-signed-in-panel">
+                <div class="auth-badge">
+                    <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" />
+                </div>
+                <div>
+                    <span class="eyebrow">Da dang nhap</span>
+                    <h1>@GetDisplayName(authContext.User)</h1>
+                    <p>Ban dang hoc voi tai khoan @GetEmail(authContext.User). Tiep tuc vao ho so de xem muc tieu va tien do hoc tap.</p>
+                    <div class="auth-inline-actions">
+                        <MudButton Href="account"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.AccountCircle"
+                                   Class="duo-button">
+                            Xem tai khoan
+                        </MudButton>
+                        <form method="post" action="/auth/sign-out">
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Secondary"
+                                       StartIcon="@Icons.Material.Filled.Logout"
+                                       Class="duo-button secondary">
+                                Dang xuat
+                            </MudButton>
+                        </form>
+                    </div>
+                </div>
+            </MudPaper>
+        </Authorized>
+        <NotAuthorized>
+            <div class="section-title auth-title">
+                <span class="eyebrow">Tai khoan hoc tap</span>
+                <h1>Dang nhap hoac tao tai khoan moi</h1>
+                <p>Luu streak, XP, muc tieu hoc va tiep tuc khoa hoc tren moi thiet bi.</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Message))
+            {
+                <MudAlert Severity="@AlertSeverity"
+                          Variant="Variant.Filled"
+                          Class="auth-message">
+                    @Message
+                </MudAlert>
+            }
+
+            <div class="auth-grid">
+                <MudPaper Elevation="0" Class="@($"auth-card login-card {GetModeClass("login")}")">
+                    <div class="auth-card-header">
+                        <div class="auth-icon blue">
+                            <MudIcon Icon="@Icons.Material.Filled.Login" />
+                        </div>
+                        <div>
+                            <h2>Dang nhap</h2>
+                            <p>Co san tai khoan demo: linh@example.com / Demo@123</p>
+                        </div>
+                    </div>
+
+                    <form method="post" action="/auth/sign-in" class="auth-form">
+                        <label class="auth-label" for="login-email">Email</label>
+                        <input id="login-email"
+                               class="auth-input"
+                               name="email"
+                               type="email"
+                               autocomplete="email"
+                               placeholder="ban@example.com"
+                               required />
+
+                        <label class="auth-label" for="login-password">Mat khau</label>
+                        <input id="login-password"
+                               class="auth-input"
+                               name="password"
+                               type="password"
+                               autocomplete="current-password"
+                               placeholder="Nhap mat khau"
+                               required />
+
+                        <label class="auth-check">
+                            <input type="checkbox" name="remember" checked />
+                            <span>Ghi nho dang nhap trong 14 ngay</span>
+                        </label>
+
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   Class="duo-button auth-submit">
+                            Dang nhap
+                        </MudButton>
+                    </form>
+
+                    <form method="post" action="/auth/forgot-password" class="forgot-form">
+                        <input name="email" type="email" placeholder="Email can khoi phuc" required />
+                        <button type="submit">Quen mat khau?</button>
+                    </form>
+                </MudPaper>
+
+                <MudPaper Elevation="0" Class="@($"auth-card register-card {GetModeClass("register")}")">
+                    <div class="auth-card-header">
+                        <div class="auth-icon green">
+                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
+                        </div>
+                        <div>
+                            <h2>Dang ky</h2>
+                            <p>Tao ho so hoc tap va dang nhap ngay sau khi tao tai khoan.</p>
+                        </div>
+                    </div>
+
+                    <form method="post" action="/auth/register" class="auth-form">
+                        <label class="auth-label" for="register-name">Ho ten</label>
+                        <input id="register-name"
+                               class="auth-input"
+                               name="fullName"
+                               autocomplete="name"
+                               placeholder="Nguyen Van A"
+                               minlength="2"
+                               required />
+
+                        <label class="auth-label" for="register-email">Email</label>
+                        <input id="register-email"
+                               class="auth-input"
+                               name="email"
+                               type="email"
+                               autocomplete="email"
+                               placeholder="ban@example.com"
+                               required />
+
+                        <label class="auth-label" for="register-goal">Muc tieu hoc</label>
+                        <select id="register-goal" class="auth-input" name="learningGoal">
+                            <option>Giao tiep hang ngay</option>
+                            <option>Thi chung chi</option>
+                            <option>Cong viec</option>
+                            <option>Du hoc</option>
+                        </select>
+
+                        <div class="auth-two-fields">
+                            <div>
+                                <label class="auth-label" for="register-password">Mat khau</label>
+                                <input id="register-password"
+                                       class="auth-input"
+                                       name="password"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       placeholder="It nhat 6 ky tu"
+                                       required />
+                            </div>
+                            <div>
+                                <label class="auth-label" for="register-confirm">Nhap lai</label>
+                                <input id="register-confirm"
+                                       class="auth-input"
+                                       name="confirmPassword"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="6"
+                                       placeholder="Nhap lai mat khau"
+                                       required />
+                            </div>
+                        </div>
+
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Star"
+                                   Class="duo-button auth-submit">
+                            Tao tai khoan
+                        </MudButton>
+                    </form>
+                </MudPaper>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {
-    private bool HasError => Navigation.Uri.Contains("error=1", StringComparison.OrdinalIgnoreCase);
-    private string Email => Query("email") ?? string.Empty;
-    private string ReturnUrl => Query("returnUrl") ?? string.Empty;
+    [SupplyParameterFromQuery(Name = "mode")]
+    public string? Mode { get; set; }
 
-    private string? Query(string key)
-    {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-        return query.TryGetValue(key, out var value) ? value.ToString() : null;
-    }
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
+
+    [SupplyParameterFromQuery(Name = "message")]
+    public string? Message { get; set; }
+
+    private Severity AlertSeverity =>
+        string.Equals(Status, "error", StringComparison.OrdinalIgnoreCase)
+            ? Severity.Error
+            : Severity.Success;
+
+    private string GetModeClass(string mode) =>
+        string.Equals(Mode, mode, StringComparison.OrdinalIgnoreCase) ? "is-active" : "";
+
+    private static string GetDisplayName(ClaimsPrincipal user) =>
+        user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tai khoan";
+
+    private static string GetEmail(ClaimsPrincipal user) =>
+        user.FindFirstValue(ClaimTypes.Email) ?? "email chua cap nhat";
 }

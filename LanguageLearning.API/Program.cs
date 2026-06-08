@@ -1,6 +1,8 @@
 using LanguageLearning.Application.Abstractions;
 using LanguageLearning.Infrastructure;
 using LanguageLearning.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
