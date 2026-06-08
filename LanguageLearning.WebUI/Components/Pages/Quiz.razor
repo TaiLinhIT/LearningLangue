@@ -1,54 +1,80 @@
+@page "/quiz/{LessonId:int}"
 @page "/quiz"
+@attribute [Authorize(Roles = "Learner,Admin")]
 @rendermode InteractiveServer
+@layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
+@inject AuthenticationStateProvider AuthState
 
-<section class="app-section">
-    <div class="section-title">
-        <h1>Bai tap va kiem tra</h1>
-        <p>Quiz cuoi bai/chuong, cham diem tu dong va hien giai thich.</p>
-    </div>
-
-    <div class="cardx form-shell">
-        @foreach (var item in QuizItems.Select((Question, Index) => new { Question, Index }))
-        {
-            <div class="mb-4">
-                <h3>@(item.Index + 1). @item.Question.Prompt</h3>
-                <div class="grid grid-2">
-                    @for (var i = 0; i < item.Question.Options.Count; i++)
-                    {
-                        var optionIndex = i;
-                        <button class="answer-button @(Answers.GetValueOrDefault(item.Index, -1) == optionIndex ? "selected" : "")"
-                                @onclick="() => Answers[item.Index] = optionIndex">
-                            @item.Question.Options[optionIndex]
-                        </button>
-                    }
-                </div>
-            </div>
-        }
-        <button class="btn btn-primary" @onclick="Submit">Nop bai</button>
-    </div>
-
-    @if (Submitted)
+<section class="workspace-section">
+    @if (_lesson is null)
     {
-        <div class="alert alert-success mt-3 form-shell">Diem: @Score/@QuizItems.Count. He thong da luu vao tien do hoc tap demo.</div>
+        <div class="loading-state">Loading quiz...</div>
+    }
+    else if (_result is not null)
+    {
+        <div class="result-panel @(_result.Passed ? "passed" : "retry")">
+            <span class="pill">Result screen</span>
+            <h1>@_result.Score%</h1>
+            <p>@_result.CorrectAnswers / @_result.TotalQuestions correct - earned @_result.XP XP</p>
+            <div class="progress-shell"><div style="width:@_result.Score%"></div></div>
+            @if (_result.Passed)
+            {
+                <p>Great work. The next lesson is unlocked.</p>
+            }
+            else
+            {
+                <p>Review mistakes and try again to unlock the next lesson.</p>
+            }
+            <a class="btn btn-primary" href="/progress">See progress</a>
+            <a class="btn btn-light" href="/review-mistakes">Review mistakes</a>
+        </div>
+    }
+    else
+    {
+        <div class="section-title">
+            <h1>@_lesson.Title Quiz</h1>
+            <p>Score 70 or higher to unlock the next lesson.</p>
+        </div>
+
+        @foreach (var question in _lesson.Questions)
+        {
+            <article class="cardx quiz-card">
+                <h3>@question.QuestionText</h3>
+                @foreach (var option in question.Options)
+                {
+                    var selected = _answers.TryGetValue(question.Id, out var answer) && answer == option.OptionText;
+                    <button class="answer-button @(selected ? "selected" : "")" @onclick="() => SelectAnswer(question.Id, option.OptionText)">
+                        @option.OptionText
+                    </button>
+                }
+            </article>
+        }
+
+        <button class="btn btn-primary btn-lg" disabled="@(!_answers.Any())" @onclick="SubmitAsync">Submit quiz</button>
     }
 </section>
 
 @code {
-    private IReadOnlyList<PracticeQuestion> QuizItems = [];
-    private Dictionary<int, int> Answers = [];
-    private bool Submitted;
-    private int Score;
+    [Parameter] public int LessonId { get; set; } = 1;
+    private Lesson? _lesson;
+    private QuizResult? _result;
+    private readonly Dictionary<int, string> _answers = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnParametersSetAsync()
     {
-        QuizItems = Catalog.GetLessons().SelectMany(lesson => lesson.Questions).Take(5).ToList();
+        _lesson = await Catalog.GetLessonAsync(LessonId == 0 ? 1 : LessonId);
     }
 
-    private void Submit()
+    private void SelectAnswer(int questionId, string option)
     {
-        Score = QuizItems.Where((question, index) => Answers.TryGetValue(index, out var answer) && answer == question.CorrectIndex).Count();
-        Submitted = true;
+        _answers[questionId] = option;
+    }
+
+    private async Task SubmitAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var userId = int.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        _result = await Catalog.SubmitQuizAsync(userId, new QuizSubmission(_lesson!.Id, _answers));
     }
 }
-

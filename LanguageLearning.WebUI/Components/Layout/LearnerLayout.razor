@@ -1,0 +1,38 @@
+@inherits LayoutComponentBase
+
+<div class="learner-shell">
+    <aside class="learner-rail">
+        <a class="brand" href="/dashboard">LinguaFlow</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/my-courses">My Courses</a>
+        <a href="/practice">Practice</a>
+        <a href="/flashcards">Flashcards</a>
+        <a href="/progress">Progress</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="/profile">Profile</a>
+    </aside>
+
+    <div class="learner-main">
+        <header class="learner-topbar">
+            <div>
+                <span class="eyebrow">Daily goal</span>
+                <strong>Keep the streak alive</strong>
+            </div>
+            <div class="quick-stats">
+                <span>XP 1,240</span>
+                <span>Streak 5</span>
+                <form method="post" action="/account/logout">
+                    <button class="link-button" type="submit">Logout</button>
+                </form>
+            </div>
+        </header>
+        @Body
+    </div>
+
+    <nav class="learner-bottom-nav">
+        <a href="/dashboard">Home</a>
+        <a href="/courses">Courses</a>
+        <a href="/practice">Practice</a>
+        <a href="/progress">Progress</a>
+    </nav>
+</div>

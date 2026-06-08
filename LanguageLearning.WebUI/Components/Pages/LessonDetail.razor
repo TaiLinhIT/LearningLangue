@@ -1,86 +1,56 @@
 @page "/lesson/{Id:int}"
-@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Learner,Admin")]
+@layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
 
-@if (Lesson is null)
-{
-    <section class="app-section">
-        <div class="alert alert-warning">Khong tim thay bai hoc.</div>
-    </section>
-}
-else
-{
-    <section class="app-section">
-        <div class="section-title">
-            <span class="pill">@Lesson.Level - @Lesson.Skill</span>
-            <h1 class="mt-2">@Lesson.Title</h1>
-            <p>@Lesson.Summary</p>
+<section class="workspace-section">
+    @if (_lesson is null)
+    {
+        <div class="loading-state">Loading lesson...</div>
+    }
+    else
+    {
+        <div class="lesson-hero">
+            <span class="pill">@_lesson.LessonType</span>
+            <h1>@_lesson.Title</h1>
+            <p>@_lesson.Description</p>
+            <div class="hero-actions">
+                <a class="btn btn-primary" href="/quiz/@_lesson.Id">Start quiz</a>
+                <a class="btn btn-light" href="/practice">Practice</a>
+            </div>
         </div>
 
         <div class="grid grid-2">
             <article class="cardx">
-                <h3>Noi dung hoc</h3>
-                <p>Phan nay co the mo rong thanh video, audio that, Markdown lesson content hoac CMS.</p>
-                <h3 class="mt-4">Vi du</h3>
-                <ul>
-                    @foreach (var example in Lesson.Examples)
-                    {
-                        <li>@example</li>
-                    }
-                </ul>
-                <div class="alert alert-secondary mt-3">Audio mau: 00:24 - giong doc ban xu, toc do cham.</div>
-            </article>
-
-            <article class="cardx">
-                <h3>Luyen tap</h3>
-                @for (var i = 0; i < Lesson.Questions.Count; i++)
+                <h3>Learn Vocabulary</h3>
+                @foreach (var word in _lesson.Vocabulary)
                 {
-                    var index = i;
-                    var question = Lesson.Questions[index];
-                    <div class="mb-3">
-                        <strong>@question.Prompt</strong>
-                        <div class="grid mt-2">
-                            @for (var j = 0; j < question.Options.Count; j++)
-                            {
-                                var optionIndex = j;
-                                var css = GetAnswerClass(index, optionIndex, question.CorrectIndex);
-                                <button class="answer-button @css" @onclick="() => Answers[index] = optionIndex">@question.Options[optionIndex]</button>
-                            }
-                        </div>
-                        @if (Answers.ContainsKey(index))
-                        {
-                            <p class="muted mt-2">@question.Explanation</p>
-                        }
+                    <div class="vocab-row">
+                        <strong>@word.Word</strong>
+                        <span>@word.Meaning</span>
+                        <small>@word.ExampleSentence</small>
                     </div>
                 }
             </article>
+            <article class="cardx">
+                <h3>Practice Modes</h3>
+                <div class="practice-grid">
+                    <a href="/practice/vocabulary">Vocabulary Quiz</a>
+                    <a href="/practice/listening">Listening Quiz</a>
+                    <a href="/practice/speaking">Speaking Practice</a>
+                    <a href="/practice/grammar">Grammar Quiz</a>
+                </div>
+            </article>
         </div>
-    </section>
-}
+    }
+</section>
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Lesson? Lesson;
-    private Dictionary<int, int> Answers = [];
+    private Lesson? _lesson;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        Lesson = Catalog.GetLesson(Id);
-    }
-
-    private string GetAnswerClass(int questionIndex, int optionIndex, int correctIndex)
-    {
-        if (!Answers.TryGetValue(questionIndex, out var selected))
-        {
-            return string.Empty;
-        }
-
-        if (optionIndex == correctIndex)
-        {
-            return "correct";
-        }
-
-        return selected == optionIndex ? "wrong" : string.Empty;
+        _lesson = await Catalog.GetLessonAsync(Id);
     }
 }
-

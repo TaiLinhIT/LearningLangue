@@ -1,0 +1,73 @@
+@page "/dashboard"
+@page "/my-courses"
+@page "/learning-goal"
+@page "/choose-language"
+@page "/placement-test"
+@attribute [Authorize(Roles = "Learner,Admin")]
+@layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
+@inject ILearningCatalogService Catalog
+@inject AuthenticationStateProvider AuthState
+
+<section class="workspace-section">
+    <div class="section-title">
+        <h1>Learner Dashboard</h1>
+        <p>Continue your path, keep your daily streak, and unlock the next lesson.</p>
+    </div>
+
+    @if (_summary is null || _courses is null)
+    {
+        <div class="loading-state">Preparing your dashboard...</div>
+    }
+    else
+    {
+        <div class="stats-grid">
+            <div class="stat-card"><span>XP</span><strong>@_summary.XP</strong></div>
+            <div class="stat-card"><span>Streak</span><strong>@_summary.CurrentStreak days</strong></div>
+            <div class="stat-card"><span>Lessons</span><strong>@_summary.LessonsCompleted</strong></div>
+            <div class="stat-card"><span>Rank</span><strong>#@_summary.Rank</strong></div>
+        </div>
+
+        <div class="grid grid-2 mt-4">
+            <article class="cardx">
+                <h3>Choose Learning Goal</h3>
+                <div class="segmented">
+                    <span>Travel</span><span>Career</span><span>Exam</span><span>Daily talk</span>
+                </div>
+                <h3 class="mt-4">Placement Test</h3>
+                <p class="muted">A short adaptive quiz can place learners into A1, A2, or B1 paths.</p>
+                <a class="btn btn-primary" href="/lesson/1">Try first lesson</a>
+            </article>
+            <article class="cardx">
+                <h3>Continue Learning</h3>
+                @foreach (var course in _courses.Take(3))
+                {
+                    <div class="lesson-row">
+                        <div>
+                            <strong>@course.Title</strong>
+                            <p class="muted">@course.Language?.Name - @course.Level</p>
+                        </div>
+                        <a class="btn btn-light" href="/course/@course.Id">Open</a>
+                    </div>
+                }
+            </article>
+        </div>
+    }
+</section>
+
+@code {
+    private DashboardSummary? _summary;
+    private IReadOnlyList<Course>? _courses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await GetUserIdAsync();
+        _summary = await Catalog.GetDashboardAsync(userId);
+        _courses = await Catalog.GetCoursesAsync();
+    }
+
+    private async Task<int> GetUserIdAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        return int.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+    }
+}

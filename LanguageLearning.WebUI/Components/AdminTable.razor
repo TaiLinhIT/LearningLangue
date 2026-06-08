@@ -1,0 +1,28 @@
+<div class="table-shell">
+    <table>
+        <thead>
+            <tr>
+                @foreach (var header in Headers)
+                {
+                    <th>@header</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Items)
+            {
+                <tr>
+                    @foreach (var cell in row)
+                    {
+                        <td>@cell</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<string> Headers { get; set; } = [];
+    [Parameter] public IReadOnlyList<string[]> Items { get; set; } = [];
+}

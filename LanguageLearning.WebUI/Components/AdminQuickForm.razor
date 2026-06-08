@@ -1,0 +1,13 @@
+<div class="admin-form cardx">
+    <h3>@Title</h3>
+    <div class="form-grid">
+        @ChildContent
+        <button class="btn btn-primary" @onclick="OnSave">Save</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Quick form";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+}

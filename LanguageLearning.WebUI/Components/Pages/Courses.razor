@@ -1,0 +1,49 @@
+@page "/courses"
+@page "/languages"
+@inject ILearningCatalogService Catalog
+
+<section class="app-section">
+    <div class="section-title">
+        <h1>Course Catalog</h1>
+        <p>Pick a path by language and CEFR level. Published courses are visible to learners.</p>
+    </div>
+
+    @if (_courses is null)
+    {
+        <div class="loading-state">Loading courses...</div>
+    }
+    else if (_courses.Count == 0)
+    {
+        <div class="empty-state">No courses are published yet.</div>
+    }
+    else
+    {
+        <div class="grid grid-3">
+            @foreach (var course in _courses)
+            {
+                <article class="course-card">
+                    <img src="@course.ThumbnailUrl" alt="@course.Title" />
+                    <div>
+                        <span class="pill">@course.Language?.Name - @course.Level</span>
+                        <h3>@course.Title</h3>
+                        <p>@course.Description</p>
+                        <div class="course-meta">
+                            <span>@course.Units.Count units</span>
+                            <span>@course.Units.Sum(x => x.Lessons.Count) lessons</span>
+                        </div>
+                        <a class="btn btn-primary" href="/course/@course.Id">Open course</a>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<Course>? _courses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _courses = await Catalog.GetCoursesAsync();
+    }
+}

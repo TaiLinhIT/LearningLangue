@@ -1,45 +1,145 @@
 @page "/admin"
-@inject ILearningCatalogService Catalog
+@page "/admin/users"
+@page "/admin/courses"
+@page "/admin/lessons"
+@page "/admin/questions"
+@page "/admin/vocabulary"
+@page "/admin/payments"
+@page "/admin/reports"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@layout LanguageLearning.WebUI.Components.Layout.AdminLayout
+@inject IAdminLearningService AdminService
+@inject NavigationManager Navigation
 
-<section class="app-section">
+<section class="admin-section">
     <div class="section-title">
-        <h1>Trang quan tri</h1>
-        <p>Dashboard mau cho admin quan ly nguoi dung, khoa hoc, bai hoc, tu vung, cau hoi, media va bao cao hoc tap.</p>
+        <h1>@Title</h1>
+        <p>Manage users, courses, units, lessons, vocabulary, questions, payments, and reports.</p>
     </div>
 
-    <div class="grid grid-4">
-        @foreach (var metric in Catalog.GetAdminMetrics())
-        {
-            <article class="cardx stat">
-                <span class="muted">@metric.Label</span>
-                <h3>@metric.Value</h3>
-                <p class="muted mb-0">@metric.Change</p>
-            </article>
-        }
-    </div>
-
-    <div class="grid grid-2 mt-4">
-        <article class="cardx">
-            <h3>Quan ly noi dung</h3>
-            <div class="table-responsive table-clean mt-3">
-                <table class="table">
-                    <thead><tr><th>Module</th><th>So luong</th><th>Trang thai</th></tr></thead>
-                    <tbody>
-                        <tr><td>Khoa hoc</td><td>36</td><td>Dang mo</td></tr>
-                        <tr><td>Bai hoc</td><td>428</td><td>Can duyet 12</td></tr>
-                        <tr><td>Tu vung</td><td>12.840</td><td>Da gan audio</td></tr>
-                        <tr><td>Cau hoi</td><td>5.420</td><td>Da phan cap do</td></tr>
-                        <tr><td>Audio/video</td><td>980</td><td>Dang xu ly 8</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </article>
-
-        <article class="cardx">
-            <h3>Bao cao hoc tap</h3>
-            <p class="muted">Ty le hoan thanh bai hoc trong tuan nay dat 68%. Ky nang nghe co nhieu nguoi bo cuoc nhat, nen them bai ngan 3-5 phut.</p>
-            <button class="btn btn-primary">Xuat bao cao</button>
-        </article>
-    </div>
+    @if (_courses is null)
+    {
+        <div class="loading-state">Loading admin data...</div>
+    }
+    else if (Path.Contains("users"))
+    {
+        <div class="table-shell">
+            <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th></tr></thead><tbody>
+            @foreach (var user in _users)
+            {
+                <tr><td>@user.FullName</td><td>@user.Email</td><td><span class="tag">@user.Role</span></td><td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td></tr>
+            }
+            </tbody></table>
+        </div>
+    }
+    else if (Path.Contains("lessons"))
+    {
+        <AdminQuickForm Title="Create Unit" OnSave="SaveUnitAsync">
+            <input placeholder="CourseId" type="number" @bind="_unit.CourseId" />
+            <input placeholder="Title" @bind="_unit.Title" />
+            <input placeholder="Sort order" type="number" @bind="_unit.SortOrder" />
+        </AdminQuickForm>
+        <AdminQuickForm Title="Create Lesson" OnSave="SaveLessonAsync">
+            <input placeholder="UnitId" type="number" @bind="_lesson.UnitId" />
+            <input placeholder="Title" @bind="_lesson.Title" />
+            <input placeholder="Description" @bind="_lesson.Description" />
+            <input placeholder="Type" @bind="_lesson.LessonType" />
+            <input placeholder="XP" type="number" @bind="_lesson.XPReward" />
+        </AdminQuickForm>
+        <AdminTable Items="@(_lessons.Select(x => new[] { x.Id.ToString(), x.Title, x.Unit?.Course?.Title ?? string.Empty, x.LessonType, x.XPReward.ToString() }).ToList())" Headers="@(new[] { "Id", "Title", "Course", "Type", "XP" })" />
+    }
+    else if (Path.Contains("questions"))
+    {
+        <AdminQuickForm Title="Create Question" OnSave="SaveQuestionAsync">
+            <input placeholder="LessonId" type="number" @bind="_question.LessonId" />
+            <input placeholder="Question text" @bind="_question.QuestionText" />
+            <input placeholder="Type" @bind="_question.QuestionType" />
+            <input placeholder="Correct answer" @bind="_question.CorrectAnswer" />
+            <input placeholder="Explanation" @bind="_question.Explanation" />
+        </AdminQuickForm>
+        <AdminTable Items="@(_questions.Select(x => new[] { x.Id.ToString(), x.QuestionText, x.Lesson?.Title ?? string.Empty, x.QuestionType, x.CorrectAnswer }).ToList())" Headers="@(new[] { "Id", "Question", "Lesson", "Type", "Answer" })" />
+    }
+    else if (Path.Contains("vocabulary"))
+    {
+        <AdminQuickForm Title="Create Vocabulary" OnSave="SaveVocabularyAsync">
+            <input placeholder="LessonId" type="number" @bind="_vocabulary.LessonId" />
+            <input placeholder="Word" @bind="_vocabulary.Word" />
+            <input placeholder="Meaning" @bind="_vocabulary.Meaning" />
+            <input placeholder="Pronunciation" @bind="_vocabulary.Pronunciation" />
+            <input placeholder="Example" @bind="_vocabulary.ExampleSentence" />
+        </AdminQuickForm>
+        <AdminTable Items="@(_vocabularyRows.Select(x => new[] { x.Id.ToString(), x.Word, x.Meaning, x.Lesson?.Title ?? string.Empty }).ToList())" Headers="@(new[] { "Id", "Word", "Meaning", "Lesson" })" />
+    }
+    else if (Path.Contains("payments"))
+    {
+        <div class="empty-state">Payment provider integration placeholder. Schema and admin route are ready.</div>
+    }
+    else if (Path.Contains("reports"))
+    {
+        <div class="stats-grid">
+            <div class="stat-card"><span>Users</span><strong>@_users.Count</strong></div>
+            <div class="stat-card"><span>Courses</span><strong>@_courses.Count</strong></div>
+            <div class="stat-card"><span>Lessons</span><strong>@_lessons.Count</strong></div>
+            <div class="stat-card"><span>Questions</span><strong>@_questions.Count</strong></div>
+        </div>
+    }
+    else
+    {
+        <AdminQuickForm Title="Create Course" OnSave="SaveCourseAsync">
+            <input placeholder="LanguageId" type="number" @bind="_course.LanguageId" />
+            <input placeholder="Title" @bind="_course.Title" />
+            <input placeholder="Description" @bind="_course.Description" />
+            <input placeholder="Level" @bind="_course.Level" />
+            <label class="check"><input type="checkbox" @bind="_course.IsPublished" /> Published</label>
+        </AdminQuickForm>
+        <div class="table-shell">
+            <table><thead><tr><th>Title</th><th>Language</th><th>Level</th><th>Status</th><th></th></tr></thead><tbody>
+            @foreach (var course in _courses)
+            {
+                <tr>
+                    <td>@course.Title</td><td>@course.Language?.Name</td><td>@course.Level</td>
+                    <td><span class="tag">@((course.IsPublished ? "Published" : "Draft"))</span></td>
+                    <td><button class="btn btn-sm btn-light" @onclick="() => ToggleAsync(course.Id)">Publish/unpublish</button></td>
+                </tr>
+            }
+            </tbody></table>
+        </div>
+    }
 </section>
 
+@code {
+    private IReadOnlyList<User> _users = [];
+    private IReadOnlyList<Course>? _courses;
+    private IReadOnlyList<Unit> _units = [];
+    private IReadOnlyList<Lesson> _lessons = [];
+    private IReadOnlyList<Vocabulary> _vocabularyRows = [];
+    private IReadOnlyList<Question> _questions = [];
+    private Course _course = new() { LanguageId = 1, Level = "A1", IsPublished = true };
+    private Unit _unit = new() { CourseId = 1, SortOrder = 1 };
+    private Lesson _lesson = new() { UnitId = 1, LessonType = LessonTypes.Vocabulary, XPReward = 20 };
+    private Vocabulary _vocabulary = new() { LessonId = 1 };
+    private Question _question = new() { LessonId = 1, QuestionType = "MultipleChoice" };
+
+    private string Path => Navigation.ToBaseRelativePath(Navigation.Uri).ToLowerInvariant();
+    private string Title => Path.Contains('/') ? Path.Split('/').Last().Replace("-", " ") : "Admin Dashboard";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _users = await AdminService.GetUsersAsync();
+        _courses = await AdminService.GetCoursesAsync();
+        _units = await AdminService.GetUnitsAsync();
+        _lessons = await AdminService.GetLessonsAsync();
+        _vocabularyRows = await AdminService.GetVocabularyAsync();
+        _questions = await AdminService.GetQuestionsAsync();
+    }
+
+    private async Task SaveCourseAsync() { await AdminService.SaveCourseAsync(_course); _course = new() { LanguageId = 1, Level = "A1", IsPublished = true }; await LoadAsync(); }
+    private async Task SaveUnitAsync() { await AdminService.SaveUnitAsync(_unit); _unit = new() { CourseId = 1, SortOrder = 1 }; await LoadAsync(); }
+    private async Task SaveLessonAsync() { await AdminService.SaveLessonAsync(_lesson); _lesson = new() { UnitId = 1, LessonType = LessonTypes.Vocabulary, XPReward = 20 }; await LoadAsync(); }
+    private async Task SaveVocabularyAsync() { await AdminService.SaveVocabularyAsync(_vocabulary); _vocabulary = new() { LessonId = 1 }; await LoadAsync(); }
+    private async Task SaveQuestionAsync() { await AdminService.SaveQuestionAsync(_question); _question = new() { LessonId = 1, QuestionType = "MultipleChoice" }; await LoadAsync(); }
+    private async Task ToggleAsync(int id) { await AdminService.ToggleCoursePublishedAsync(id); await LoadAsync(); }
+}

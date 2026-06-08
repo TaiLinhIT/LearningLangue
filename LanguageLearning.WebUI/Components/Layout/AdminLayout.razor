@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <a class="brand inverse" href="/admin">LinguaFlow Admin</a>
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/users">Users</a>
+        <a href="/admin/courses">Courses</a>
+        <a href="/admin/lessons">Lessons</a>
+        <a href="/admin/questions">Questions</a>
+        <a href="/admin/vocabulary">Vocabulary</a>
+        <a href="/admin/payments">Payments</a>
+        <a href="/admin/reports">Reports</a>
+    </aside>
+    <main class="admin-main">
+        <header class="admin-topbar">
+            <strong>Content operations</strong>
+            <form method="post" action="/account/logout">
+                <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
+            </form>
+        </header>
+        @Body
+    </main>
+</div>

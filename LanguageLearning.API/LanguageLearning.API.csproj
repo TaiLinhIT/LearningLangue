@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
-    <ProjectReference Include="..\LanguageLearning.Persistence\LanguageLearning.Persistence.csproj" />
+    <ProjectReference Include="..\LanguageLearning.Infrastructure\LanguageLearning.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

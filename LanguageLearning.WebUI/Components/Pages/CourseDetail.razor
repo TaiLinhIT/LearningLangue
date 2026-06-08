@@ -1,0 +1,50 @@
+@page "/course/{Id:int}"
+@attribute [Authorize(Roles = "Learner,Admin")]
+@layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
+@inject ILearningCatalogService Catalog
+
+<section class="workspace-section">
+    @if (_course is null)
+    {
+        <div class="loading-state">Loading course...</div>
+    }
+    else
+    {
+        <div class="section-title">
+            <h1>@_course.Title</h1>
+            <p>@_course.Description</p>
+        </div>
+        <div class="learning-path">
+            @foreach (var unit in _course.Units.OrderBy(x => x.SortOrder))
+            {
+                <article class="cardx">
+                    <h3>@unit.Title</h3>
+                    @foreach (var lesson in unit.Lessons.OrderBy(x => x.SortOrder))
+                    {
+                        <div class="lesson-row">
+                            <div>
+                                <strong>@lesson.Title</strong>
+                                <p class="muted">@lesson.Description</p>
+                                <span class="pill">@lesson.LessonType</span>
+                                <span class="pill">@lesson.XPReward XP</span>
+                            </div>
+                            <a class="btn @(lesson.IsLocked ? "btn-light disabled" : "btn-primary")" href="/lesson/@lesson.Id">
+                                @(lesson.IsLocked ? "Locked" : "Start")
+                            </a>
+                        </div>
+                    }
+                </article>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Course? _course;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _course = await Catalog.GetCourseAsync(Id);
+    }
+}

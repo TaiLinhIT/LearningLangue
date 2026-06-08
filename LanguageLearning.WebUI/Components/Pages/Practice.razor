@@ -1,0 +1,88 @@
+@page "/practice"
+@page "/practice/vocabulary"
+@page "/practice/listening"
+@page "/practice/speaking"
+@page "/practice/grammar"
+@page "/flashcards"
+@page "/review-mistakes"
+@page "/leaderboard"
+@page "/profile"
+@page "/subscription"
+@attribute [Authorize(Roles = "Learner,Admin")]
+@layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
+@inject ILearningCatalogService Catalog
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Navigation
+
+<section class="workspace-section">
+    <div class="section-title">
+        <h1>@Title</h1>
+        <p>@Subtitle</p>
+    </div>
+
+    @if (Path.Contains("review-mistakes"))
+    {
+        @if (_mistakes is null)
+        {
+            <div class="loading-state">Loading mistakes...</div>
+        }
+        else if (_mistakes.Count == 0)
+        {
+            <div class="empty-state">No mistakes yet. Nice clean slate.</div>
+        }
+        else
+        {
+            <div class="grid grid-2">
+                @foreach (var mistake in _mistakes)
+                {
+                    <article class="cardx">
+                        <h3>@mistake.Question?.QuestionText</h3>
+                        <p class="muted">Your answer: @mistake.SelectedAnswer</p>
+                        <strong>Correct: @mistake.Question?.CorrectAnswer</strong>
+                    </article>
+                }
+            </div>
+        }
+    }
+    else if (Path.Contains("leaderboard"))
+    {
+        <div class="leaderboard">
+            <div><strong>1</strong><span>Linh Nguyen</span><b>1240 XP</b></div>
+            <div><strong>2</strong><span>Minh Tran</span><b>1180 XP</b></div>
+            <div><strong>3</strong><span>Hana Lee</span><b>950 XP</b></div>
+        </div>
+    }
+    else if (Path.Contains("profile") || Path.Contains("subscription"))
+    {
+        <div class="grid grid-2">
+            <article class="cardx"><h3>Profile</h3><p>Avatar, full name, email, role, goal, and preferred language.</p></article>
+            <article class="cardx"><h3>Subscription</h3><p>Free, Plus, and Team plans with payment history.</p><a class="btn btn-primary" href="/pricing">Upgrade</a></article>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-4">
+            <a class="practice-tile" href="/practice/vocabulary"><strong>Vocabulary Quiz</strong><span>Match words and meanings</span></a>
+            <a class="practice-tile" href="/practice/listening"><strong>Listening Quiz</strong><span>Audio prompts and dictation</span></a>
+            <a class="practice-tile" href="/practice/speaking"><strong>Speaking Practice</strong><span>Pronunciation confidence</span></a>
+            <a class="practice-tile" href="/practice/grammar"><strong>Grammar Quiz</strong><span>Patterns and corrections</span></a>
+        </div>
+        <div class="flashcard mt-4">
+            <div><strong>hello</strong><span>xin chao - Hello, my name is Linh.</span></div>
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<UserAnswer>? _mistakes;
+    private string Path => Navigation.ToBaseRelativePath(Navigation.Uri).ToLowerInvariant();
+    private string Title => Path.Contains("flashcards") ? "Flashcards" : Path.Contains("review-mistakes") ? "Review Mistakes" : Path.Contains("leaderboard") ? "Leaderboard" : Path.Contains("profile") ? "Profile" : Path.Contains("subscription") ? "Subscription" : "Practice";
+    private string Subtitle => "Focused learner tools for vocabulary, listening, speaking, grammar, and review.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var userId = int.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        _mistakes = await Catalog.GetMistakesAsync(userId);
+    }
+}

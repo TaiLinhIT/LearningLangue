@@ -1,29 +1,27 @@
 using LanguageLearning.Application.Abstractions;
-using LanguageLearning.Persistence;
+using LanguageLearning.Infrastructure;
+using LanguageLearning.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddPersistence();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.MapGet("/", () => Results.Ok(new
 {
     Name = "LanguageLearning API",
-    Version = "1.0",
-    Endpoints = new[] { "/api/languages", "/api/lessons", "/api/vocabulary", "/api/progress", "/api/pricing" }
+    Version = "2.0",
+    Endpoints = new[] { "/api/languages", "/api/courses", "/api/lessons/{id}", "/api/progress/{userId}" }
 }));
 
-app.MapGet("/api/languages", (ILearningCatalogService catalog) => catalog.GetLanguages());
-app.MapGet("/api/lessons", (ILearningCatalogService catalog, string? languageCode) => catalog.GetLessons(languageCode));
-app.MapGet("/api/lessons/{id:int}", (ILearningCatalogService catalog, int id) =>
-    catalog.GetLesson(id) is { } lesson ? Results.Ok(lesson) : Results.NotFound());
-app.MapGet("/api/vocabulary", (ILearningCatalogService catalog, string? query) => catalog.GetVocabulary(query));
-app.MapGet("/api/placement-test", (ILearningCatalogService catalog) => catalog.GetPlacementQuestions());
-app.MapGet("/api/progress", (ILearningCatalogService catalog) => catalog.GetProgress());
-app.MapGet("/api/pricing", (ILearningCatalogService catalog) => catalog.GetPricingPlans());
-app.MapGet("/api/admin/metrics", (ILearningCatalogService catalog) => catalog.GetAdminMetrics());
+app.MapGet("/api/languages", async (ILearningCatalogService catalog) => await catalog.GetLanguagesAsync());
+app.MapGet("/api/courses", async (ILearningCatalogService catalog, bool includeDrafts) => await catalog.GetCoursesAsync(includeDrafts));
+app.MapGet("/api/courses/{id:int}", async (ILearningCatalogService catalog, int id) =>
+    await catalog.GetCourseAsync(id) is { } course ? Results.Ok(course) : Results.NotFound());
+app.MapGet("/api/lessons/{id:int}", async (ILearningCatalogService catalog, int id) =>
+    await catalog.GetLessonAsync(id) is { } lesson ? Results.Ok(lesson) : Results.NotFound());
+app.MapGet("/api/progress/{userId:int}", async (ILearningCatalogService catalog, int userId) => await catalog.GetProgressAsync(userId));
+app.MapGet("/api/mistakes/{userId:int}", async (ILearningCatalogService catalog, int userId) => await catalog.GetMistakesAsync(userId));
 
+await LanguageLearningDbInitializer.InitializeAsync(app.Services);
 app.Run();
