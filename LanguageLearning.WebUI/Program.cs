@@ -15,7 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
-builder.Services.AddSingleton<ILearningAuthService, InMemoryLearningAuthService>();
+builder.Services.AddScoped<ILearningAuthService, DatabaseLearningAuthService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -81,11 +81,24 @@ app.MapPost("/auth/forgot-password", async (HttpContext httpContext, ILearningAu
 {
     var form = await httpContext.Request.ReadFormAsync();
     var email = form["email"].ToString();
-    var message = authService.FindByEmail(email) is null
+    var message = await authService.FindByEmailAsync(email) is null
         ? "Neu email ton tai, chung toi se gui huong dan khoi phuc mat khau."
         : "Da tao yeu cau khoi phuc mat khau cho tai khoan nay.";
 
     return RedirectToAuth("login", "success", message);
+}).DisableAntiforgery();
+
+app.MapPost("/auth/external/{provider}", (string provider) =>
+{
+    var safeProvider = provider.ToLowerInvariant() switch
+    {
+        "google" => "Google",
+        "facebook" => "Facebook",
+        "github" => "Github",
+        _ => "nha cung cap nay"
+    };
+
+    return RedirectToAuth("login", "error", $"Dang nhap voi {safeProvider} chua duoc cau hinh. Vui long su dung email va mat khau.");
 }).DisableAntiforgery();
 
 app.MapPost("/auth/sign-out", async (HttpContext httpContext) =>
@@ -97,7 +110,11 @@ app.MapPost("/auth/sign-out", async (HttpContext httpContext) =>
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-await LanguageLearningDbInitializer.InitializeAsync(app.Services);
+if (!app.Configuration.GetValue<bool>("SkipDbInitializer"))
+{
+    await LanguageLearningDbInitializer.InitializeAsync(app.Services);
+}
+
 app.Run();
 
 static async Task SignInUserAsync(HttpContext httpContext, LearningUser user, bool rememberMe)

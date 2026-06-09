@@ -1,20 +1,9 @@
 @page "/register"
 @inject NavigationManager Navigation
 
-<section class="auth-page">
-    <div class="auth-panel">
-        <span class="pill">New learner</span>
-        <h1>Register</h1>
-        @if (Navigation.Uri.Contains("error=1", StringComparison.OrdinalIgnoreCase))
-        {
-            <div class="error-state">This email is already registered.</div>
-        }
-        <form method="post" action="/account/register" class="form-stack">
-            <label>Full name<input name="fullName" required /></label>
-            <label>Email<input name="email" type="email" required /></label>
-            <label>Password<input name="password" type="password" minlength="6" required /></label>
-            <button class="btn btn-primary btn-lg" type="submit">Create account</button>
-        </form>
-        <a href="/login">Already have an account?</a>
-    </div>
-</section>
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/auth?mode=register", replace: true);
+    }
+}

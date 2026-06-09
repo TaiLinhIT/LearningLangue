@@ -25,6 +25,7 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasIndex(x => x.Email).IsUnique();
+        modelBuilder.Entity<User>().Property(x => x.LearningGoal).HasMaxLength(180);
         modelBuilder.Entity<Language>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<Course>().Property(x => x.Title).HasMaxLength(180);
         modelBuilder.Entity<Payment>().Property(x => x.Amount).HasColumnType("decimal(18,2)");

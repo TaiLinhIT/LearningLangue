@@ -35,146 +35,195 @@
             </MudPaper>
         </Authorized>
         <NotAuthorized>
-            <div class="section-title auth-title">
-                <span class="eyebrow">Tai khoan hoc tap</span>
-                <h1>Dang nhap hoac tao tai khoan moi</h1>
-                <p>Luu streak, XP, muc tieu hoc va tiep tuc khoa hoc tren moi thiet bi.</p>
-            </div>
+            <div class="auth-modal-shell">
+                <div class="auth-modal" role="dialog" aria-labelledby="auth-title">
+                    <a class="auth-close" href="/" aria-label="Đóng">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" />
+                    </a>
 
-            @if (!string.IsNullOrWhiteSpace(Message))
-            {
-                <MudAlert Severity="@AlertSeverity"
-                          Variant="Variant.Filled"
-                          Class="auth-message">
-                    @Message
-                </MudAlert>
-            }
+                    <div class="auth-brand-mark">LinguaFlow</div>
 
-            <div class="auth-grid">
-                <MudPaper Elevation="0" Class="@($"auth-card login-card {GetModeClass("login")}")">
-                    <div class="auth-card-header">
-                        <div class="auth-icon blue">
-                            <MudIcon Icon="@Icons.Material.Filled.Login" />
+                    <h1 id="auth-title">@PageTitle</h1>
+                    <p class="auth-warning">Mỗi người nên sử dụng riêng một tài khoản, tài khoản nhiều người sử dụng chung sẽ bị khóa.</p>
+
+                    @if (!string.IsNullOrWhiteSpace(Message))
+                    {
+                        <MudAlert Severity="@AlertSeverity"
+                                  Variant="Variant.Filled"
+                                  Class="auth-message auth-modal-message">
+                            @Message
+                        </MudAlert>
+                    }
+
+                    @if (IsForgotMode)
+                    {
+                        <form method="post" action="/auth/forgot-password" class="auth-email-form auth-forgot-panel">
+                            <label class="auth-label" for="forgot-email">Email cần khôi phục</label>
+                            <input id="forgot-email"
+                                   class="auth-input"
+                                   name="email"
+                                   type="email"
+                                   autocomplete="email"
+                                   placeholder="ban@example.com"
+                                   required />
+
+                            <button class="auth-submit-button" type="submit">
+                                Gửi hướng dẫn
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="auth-social-stack">
+                            <form method="post" action="/auth/external/google">
+                                <button class="auth-social-button" type="submit">
+                                    <span class="auth-provider-icon google">G</span>
+                                    <span>@ActionText với Google</span>
+                                </button>
+                            </form>
+                            <form method="post" action="/auth/external/facebook">
+                                <button class="auth-social-button" type="submit">
+                                    <span class="auth-provider-icon facebook">f</span>
+                                    <span>@ActionText với Facebook</span>
+                                </button>
+                            </form>
+                            <form method="post" action="/auth/external/github">
+                                <button class="auth-social-button" type="submit">
+                                    <span class="auth-provider-icon github">GH</span>
+                                    <span>@ActionText với Github</span>
+                                </button>
+                            </form>
                         </div>
-                        <div>
-                            <h2>Dang nhap</h2>
-                            <p>Co san tai khoan demo: linh@example.com / Demo@123</p>
-                        </div>
+
+                        <details class="auth-email-details">
+                            <summary class="auth-social-button auth-email-summary">
+                                <span class="auth-provider-icon email">
+                                    <MudIcon Icon="@Icons.Material.Filled.PersonOutline" />
+                                </span>
+                                <span>Sử dụng email / số điện thoại</span>
+                            </summary>
+
+                            @if (IsRegisterMode)
+                            {
+                                <form method="post" action="/auth/register" class="auth-email-form">
+                                    <label class="auth-label" for="register-name">Họ tên</label>
+                                    <input id="register-name"
+                                           class="auth-input"
+                                           name="fullName"
+                                           autocomplete="name"
+                                           placeholder="Nguyen Van A"
+                                           minlength="2"
+                                           required />
+
+                                    <label class="auth-label" for="register-email">Email</label>
+                                    <input id="register-email"
+                                           class="auth-input"
+                                           name="email"
+                                           type="email"
+                                           autocomplete="email"
+                                           placeholder="ban@example.com"
+                                           required />
+
+                                    <label class="auth-label" for="register-goal">Mục tiêu học</label>
+                                    <select id="register-goal" class="auth-input" name="learningGoal">
+                                        <option>Giao tiếp hằng ngày</option>
+                                        <option>Thi chứng chỉ</option>
+                                        <option>Công việc</option>
+                                        <option>Du học</option>
+                                    </select>
+
+                                    <div class="auth-two-fields">
+                                        <div>
+                                            <label class="auth-label" for="register-password">Mật khẩu</label>
+                                            <input id="register-password"
+                                                   class="auth-input"
+                                                   name="password"
+                                                   type="password"
+                                                   autocomplete="new-password"
+                                                   minlength="6"
+                                                   placeholder="Ít nhất 6 ký tự"
+                                                   required />
+                                        </div>
+                                        <div>
+                                            <label class="auth-label" for="register-confirm">Nhập lại</label>
+                                            <input id="register-confirm"
+                                                   class="auth-input"
+                                                   name="confirmPassword"
+                                                   type="password"
+                                                   autocomplete="new-password"
+                                                   minlength="6"
+                                                   placeholder="Nhập lại mật khẩu"
+                                                   required />
+                                        </div>
+                                    </div>
+
+                                    <button class="auth-submit-button" type="submit">
+                                        Đăng ký tài khoản
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form method="post" action="/auth/sign-in" class="auth-email-form">
+                                    <label class="auth-label" for="login-email">Email</label>
+                                    <input id="login-email"
+                                           class="auth-input"
+                                           name="email"
+                                           type="email"
+                                           autocomplete="email"
+                                           placeholder="ban@example.com"
+                                           required />
+
+                                    <label class="auth-label" for="login-password">Mật khẩu</label>
+                                    <input id="login-password"
+                                           class="auth-input"
+                                           name="password"
+                                           type="password"
+                                           autocomplete="current-password"
+                                           placeholder="Nhập mật khẩu"
+                                           required />
+
+                                    <label class="auth-check">
+                                        <input type="checkbox" name="remember" checked />
+                                        <span>Ghi nhớ đăng nhập trong 14 ngày</span>
+                                    </label>
+
+                                    <button class="auth-submit-button" type="submit">
+                                        Đăng nhập
+                                    </button>
+                                </form>
+                            }
+                        </details>
+                    }
+
+                    <div class="auth-switch-line">
+                        @if (IsForgotMode)
+                        {
+                            <span>Đã nhớ mật khẩu?</span>
+                            <a href="/auth?mode=login">Đăng nhập</a>
+                        }
+                        else if (IsRegisterMode)
+                        {
+                            <span>Bạn đã có tài khoản?</span>
+                            <a href="/auth?mode=login">Đăng nhập</a>
+                        }
+                        else
+                        {
+                            <span>Bạn chưa có tài khoản?</span>
+                            <a href="/auth?mode=register">Đăng ký</a>
+                        }
                     </div>
 
-                    <form method="post" action="/auth/sign-in" class="auth-form">
-                        <label class="auth-label" for="login-email">Email</label>
-                        <input id="login-email"
-                               class="auth-input"
-                               name="email"
-                               type="email"
-                               autocomplete="email"
-                               placeholder="ban@example.com"
-                               required />
+                    @if (!IsForgotMode)
+                    {
+                        <a class="auth-forgot-link" href="/auth?mode=forgot">Quên mật khẩu?</a>
+                    }
 
-                        <label class="auth-label" for="login-password">Mat khau</label>
-                        <input id="login-password"
-                               class="auth-input"
-                               name="password"
-                               type="password"
-                               autocomplete="current-password"
-                               placeholder="Nhap mat khau"
-                               required />
-
-                        <label class="auth-check">
-                            <input type="checkbox" name="remember" checked />
-                            <span>Ghi nho dang nhap trong 14 ngay</span>
-                        </label>
-
-                        <MudButton ButtonType="ButtonType.Submit"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.PlayArrow"
-                                   Class="duo-button auth-submit">
-                            Dang nhap
-                        </MudButton>
-                    </form>
-
-                    <form method="post" action="/auth/forgot-password" class="forgot-form">
-                        <input name="email" type="email" placeholder="Email can khoi phuc" required />
-                        <button type="submit">Quen mat khau?</button>
-                    </form>
-                </MudPaper>
-
-                <MudPaper Elevation="0" Class="@($"auth-card register-card {GetModeClass("register")}")">
-                    <div class="auth-card-header">
-                        <div class="auth-icon green">
-                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
-                        </div>
-                        <div>
-                            <h2>Dang ky</h2>
-                            <p>Tao ho so hoc tap va dang nhap ngay sau khi tao tai khoan.</p>
-                        </div>
-                    </div>
-
-                    <form method="post" action="/auth/register" class="auth-form">
-                        <label class="auth-label" for="register-name">Ho ten</label>
-                        <input id="register-name"
-                               class="auth-input"
-                               name="fullName"
-                               autocomplete="name"
-                               placeholder="Nguyen Van A"
-                               minlength="2"
-                               required />
-
-                        <label class="auth-label" for="register-email">Email</label>
-                        <input id="register-email"
-                               class="auth-input"
-                               name="email"
-                               type="email"
-                               autocomplete="email"
-                               placeholder="ban@example.com"
-                               required />
-
-                        <label class="auth-label" for="register-goal">Muc tieu hoc</label>
-                        <select id="register-goal" class="auth-input" name="learningGoal">
-                            <option>Giao tiep hang ngay</option>
-                            <option>Thi chung chi</option>
-                            <option>Cong viec</option>
-                            <option>Du hoc</option>
-                        </select>
-
-                        <div class="auth-two-fields">
-                            <div>
-                                <label class="auth-label" for="register-password">Mat khau</label>
-                                <input id="register-password"
-                                       class="auth-input"
-                                       name="password"
-                                       type="password"
-                                       autocomplete="new-password"
-                                       minlength="6"
-                                       placeholder="It nhat 6 ky tu"
-                                       required />
-                            </div>
-                            <div>
-                                <label class="auth-label" for="register-confirm">Nhap lai</label>
-                                <input id="register-confirm"
-                                       class="auth-input"
-                                       name="confirmPassword"
-                                       type="password"
-                                       autocomplete="new-password"
-                                       minlength="6"
-                                       placeholder="Nhap lai mat khau"
-                                       required />
-                            </div>
-                        </div>
-
-                        <MudButton ButtonType="ButtonType.Submit"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Star"
-                                   Class="duo-button auth-submit">
-                            Tao tai khoan
-                        </MudButton>
-                    </form>
-                </MudPaper>
+                    <p class="auth-terms">
+                        Việc bạn tiếp tục sử dụng trang web này đồng nghĩa bạn đồng ý với
+                        <a href="/pricing">điều khoản sử dụng</a> của chúng tôi.
+                    </p>
+                </div>
             </div>
         </NotAuthorized>
     </AuthorizeView>
@@ -190,13 +239,25 @@
     [SupplyParameterFromQuery(Name = "message")]
     public string? Message { get; set; }
 
+    private bool IsRegisterMode =>
+        string.Equals(Mode, "register", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsForgotMode =>
+        string.Equals(Mode, "forgot", StringComparison.OrdinalIgnoreCase);
+
+    private string PageTitle =>
+        IsForgotMode
+            ? "Khôi phục mật khẩu LinguaFlow"
+            : IsRegisterMode
+                ? "Đăng ký tài khoản LinguaFlow"
+                : "Đăng nhập vào LinguaFlow";
+
+    private string ActionText => IsRegisterMode ? "Đăng ký" : "Đăng nhập";
+
     private Severity AlertSeverity =>
         string.Equals(Status, "error", StringComparison.OrdinalIgnoreCase)
             ? Severity.Error
             : Severity.Success;
-
-    private string GetModeClass(string mode) =>
-        string.Equals(Mode, mode, StringComparison.OrdinalIgnoreCase) ? "is-active" : "";
 
     private static string GetDisplayName(ClaimsPrincipal user) =>
         user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tai khoan";

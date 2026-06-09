@@ -1,16 +1,16 @@
-using System.Collections.Concurrent;
 using System.Net.Mail;
-using System.Security.Cryptography;
+using LanguageLearning.Application.Abstractions;
+using LanguageLearning.Domain;
 
 namespace LanguageLearning.WebUI.Services;
 
 public interface ILearningAuthService
 {
-    Task<AuthResult> RegisterAsync(RegisterInput input);
+    Task<AuthResult> RegisterAsync(RegisterInput input, CancellationToken cancellationToken = default);
 
-    Task<AuthResult> SignInAsync(SignInInput input);
+    Task<AuthResult> SignInAsync(SignInInput input, CancellationToken cancellationToken = default);
 
-    LearningUser? FindByEmail(string email);
+    Task<LearningUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 }
 
 public sealed record RegisterInput(
@@ -31,44 +31,20 @@ public sealed record AuthResult(bool Succeeded, string Message, LearningUser? Us
 
 public sealed class LearningUser
 {
-    public required Guid Id { get; init; }
+    public required int Id { get; init; }
 
     public required string FullName { get; init; }
 
     public required string Email { get; init; }
 
-    public required string PasswordHash { get; init; }
-
     public required string LearningGoal { get; init; }
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset? LastSignedInAt { get; set; }
 }
 
-public sealed class InMemoryLearningAuthService : ILearningAuthService
+public sealed class DatabaseLearningAuthService(IAuthService authService) : ILearningAuthService
 {
-    private const int SaltSize = 16;
-    private const int KeySize = 32;
-    private const int Iterations = 120_000;
-
-    private readonly ConcurrentDictionary<string, LearningUser> _users = new(StringComparer.OrdinalIgnoreCase);
-
-    public InMemoryLearningAuthService()
-    {
-        var demo = new LearningUser
-        {
-            Id = Guid.Parse("5ee44aa1-70a3-44e4-910e-76d2a6f88d43"),
-            FullName = "Nguyen Linh",
-            Email = "linh@example.com",
-            LearningGoal = "Giao tiep hang ngay",
-            PasswordHash = HashPassword("Demo@123")
-        };
-
-        _users[NormalizeEmail(demo.Email)] = demo;
-    }
-
-    public Task<AuthResult> RegisterAsync(RegisterInput input)
+    public async Task<AuthResult> RegisterAsync(RegisterInput input, CancellationToken cancellationToken = default)
     {
         var fullName = input.FullName.Trim();
         var email = input.Email.Trim();
@@ -78,62 +54,71 @@ public sealed class InMemoryLearningAuthService : ILearningAuthService
 
         if (fullName.Length < 2)
         {
-            return Task.FromResult(AuthResult.Failure("Vui long nhap ho ten hop le."));
+            return AuthResult.Failure("Vui long nhap ho ten hop le.");
         }
 
         if (!IsValidEmail(email))
         {
-            return Task.FromResult(AuthResult.Failure("Email khong hop le."));
+            return AuthResult.Failure("Email khong hop le.");
         }
 
         if (input.Password.Length < 6)
         {
-            return Task.FromResult(AuthResult.Failure("Mat khau can it nhat 6 ky tu."));
+            return AuthResult.Failure("Mat khau can it nhat 6 ky tu.");
         }
 
         if (!string.Equals(input.Password, input.ConfirmPassword, StringComparison.Ordinal))
         {
-            return Task.FromResult(AuthResult.Failure("Mat khau xac nhan khong khop."));
+            return AuthResult.Failure("Mat khau xac nhan khong khop.");
         }
 
-        var normalizedEmail = NormalizeEmail(email);
-        var user = new LearningUser
+        try
         {
-            Id = Guid.NewGuid(),
-            FullName = fullName,
-            Email = email,
-            LearningGoal = learningGoal,
-            PasswordHash = HashPassword(input.Password),
-            LastSignedInAt = DateTimeOffset.UtcNow
-        };
-
-        return Task.FromResult(_users.TryAdd(normalizedEmail, user)
-            ? AuthResult.Success(user, "Dang ky thanh cong. Chao mung ban den voi LinguaFlow!")
-            : AuthResult.Failure("Email nay da duoc dang ky."));
+            var user = await authService.RegisterAsync(fullName, email, input.Password, learningGoal, cancellationToken);
+            return AuthResult.Success(ToLearningUser(user), "Dang ky thanh cong. Chao mung ban den voi LinguaFlow!");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return AuthResult.Failure(ex.Message);
+        }
     }
 
-    public Task<AuthResult> SignInAsync(SignInInput input)
+    public async Task<AuthResult> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
     {
         var email = input.Email.Trim();
 
         if (!IsValidEmail(email))
         {
-            return Task.FromResult(AuthResult.Failure("Email khong hop le."));
+            return AuthResult.Failure("Email khong hop le.");
         }
 
-        if (!_users.TryGetValue(NormalizeEmail(email), out var user)
-            || !VerifyPassword(input.Password, user.PasswordHash))
-        {
-            return Task.FromResult(AuthResult.Failure("Email hoac mat khau khong dung."));
-        }
-
-        user.LastSignedInAt = DateTimeOffset.UtcNow;
-        return Task.FromResult(AuthResult.Success(user, "Dang nhap thanh cong."));
+        var user = await authService.ValidateUserAsync(email, input.Password, cancellationToken);
+        return user is null
+            ? AuthResult.Failure("Email hoac mat khau khong dung.")
+            : AuthResult.Success(ToLearningUser(user), "Dang nhap thanh cong.");
     }
 
-    public LearningUser? FindByEmail(string email)
+    public async Task<LearningUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        return _users.TryGetValue(NormalizeEmail(email), out var user) ? user : null;
+        if (!IsValidEmail(email.Trim()))
+        {
+            return null;
+        }
+
+        var user = await authService.FindByEmailAsync(email, cancellationToken);
+        return user is null ? null : ToLearningUser(user);
+    }
+
+    private static LearningUser ToLearningUser(User user)
+    {
+        return new LearningUser
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email,
+            LearningGoal = user.LearningGoal,
+            CreatedAt = user.CreatedAt
+        };
     }
 
     private static bool IsValidEmail(string email)
@@ -151,35 +136,5 @@ public sealed class InMemoryLearningAuthService : ILearningAuthService
         {
             return false;
         }
-    }
-
-    private static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
-
-    private static string HashPassword(string password)
-    {
-        Span<byte> salt = stackalloc byte[SaltSize];
-        RandomNumberGenerator.Fill(salt);
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt.ToArray(), Iterations, HashAlgorithmName.SHA256);
-        var key = pbkdf2.GetBytes(KeySize);
-
-        return $"v1.{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(key)}";
-    }
-
-    private static bool VerifyPassword(string password, string passwordHash)
-    {
-        var parts = passwordHash.Split('.', 4);
-        if (parts.Length != 4 || parts[0] != "v1" || !int.TryParse(parts[1], out var iterations))
-        {
-            return false;
-        }
-
-        var salt = Convert.FromBase64String(parts[2]);
-        var expectedKey = Convert.FromBase64String(parts[3]);
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-        var actualKey = pbkdf2.GetBytes(expectedKey.Length);
-
-        return CryptographicOperations.FixedTimeEquals(actualKey, expectedKey);
     }
 }

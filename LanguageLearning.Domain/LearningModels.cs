@@ -29,6 +29,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public string Role { get; set; } = Roles.Learner;
+    public string LearningGoal { get; set; } = "Giao tiep hang ngay";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<UserCourse> UserCourses { get; set; } = [];
     public ICollection<UserLessonProgress> LessonProgress { get; set; } = [];

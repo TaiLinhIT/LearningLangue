@@ -33,5 +33,6 @@ public interface IAdminLearningService
 public interface IAuthService
 {
     Task<User?> ValidateUserAsync(string email, string password, CancellationToken cancellationToken = default);
-    Task<User> RegisterAsync(string fullName, string email, string password, CancellationToken cancellationToken = default);
+    Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<User> RegisterAsync(string fullName, string email, string password, string learningGoal, CancellationToken cancellationToken = default);
 }
