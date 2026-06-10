@@ -1,6 +1,6 @@
 @page "/quiz/{LessonId:int}"
 @page "/quiz"
-@attribute [Authorize(Roles = "Learner,Admin")]
+@attribute [Authorize(Roles = "Student,Admin")]
 @rendermode InteractiveServer
 @layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog

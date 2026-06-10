@@ -333,3 +333,74 @@ public record AIScoringResponse(
     int OverallScore,
     string Feedback,
     string SuggestedSentence);
+
+public record VocabularyLibraryItem(
+    int Id,
+    string Word,
+    string Meaning,
+    string? Pronunciation,
+    string? ExampleSentence,
+    string? AudioUrl,
+    string? ImageUrl,
+    string CourseTitle,
+    string Topic,
+    string Level,
+    string Status);
+
+public record RankingEntry(
+    int Rank,
+    int StudentId,
+    string StudentName,
+    string ClassName,
+    int XP,
+    int QuizScore,
+    int AIPracticeScore,
+    int CompletionPoint,
+    int TotalPoint,
+    int Streak);
+
+public record RewardStatusItem(
+    int Id,
+    string Title,
+    string Description,
+    string Requirement,
+    string Status);
+
+public record IpaSoundItem(
+    int Id,
+    string Symbol,
+    string SoundType,
+    string ExampleWord,
+    string? AudioUrl,
+    string? VideoUrl,
+    string VietnameseGuide,
+    string ComparisonNote);
+
+public record ClassmateItem(
+    int StudentId,
+    string FullName,
+    int XP,
+    int CompletedLessons);
+
+public record ClassCommentReplyItem(
+    int Id,
+    string AuthorName,
+    string Content,
+    DateTime CreatedAt);
+
+public record ClassCommentItem(
+    int Id,
+    string AuthorName,
+    string Content,
+    bool IsPinned,
+    DateTime CreatedAt,
+    IReadOnlyList<ClassCommentReplyItem> Replies);
+
+public record ClassOverview(
+    string ClassName,
+    string Level,
+    string TeacherName,
+    DateTime StartDate,
+    DateTime EndDate,
+    IReadOnlyList<ClassmateItem> Students,
+    IReadOnlyList<ClassCommentItem> Comments);

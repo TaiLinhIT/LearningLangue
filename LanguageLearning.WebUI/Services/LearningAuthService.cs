@@ -7,12 +7,11 @@ namespace LanguageLearning.WebUI.Services;
 public interface ILearningAuthService
 {
     Task<AuthResult> RegisterAsync(RegisterInput input);
-    Task<AuthResult> SignInAsync(SignInInput input);
-    Task<bool> ExistsAsync(string email);
     Task<AuthResult> RegisterAsync(RegisterInput input, CancellationToken cancellationToken = default);
-
+    Task<AuthResult> SignInAsync(SignInInput input);
     Task<AuthResult> SignInAsync(SignInInput input, CancellationToken cancellationToken = default);
-
+    Task<bool> ExistsAsync(string email);
+    Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default);
     Task<LearningUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 }
 
@@ -38,27 +37,20 @@ public sealed record LearningUser(
     string Role,
     string SessionToken,
     string LearningGoal,
-    DateTimeOffset CreatedAt);
-public sealed class LearningUser
-{
-    public required int Id { get; init; }
+    DateTime CreatedAt);
 
 public sealed class DatabaseLearningAuthService(
     IAuthService authService,
     IHttpContextAccessor httpContextAccessor) : ILearningAuthService
-    public required string FullName { get; init; }
-
-    public required string Email { get; init; }
-
-    public required string LearningGoal { get; init; }
-
-    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-}
-
-public sealed class DatabaseLearningAuthService(IAuthService authService) : ILearningAuthService
 {
-    public async Task<AuthResult> RegisterAsync(RegisterInput input)
-    public async Task<AuthResult> RegisterAsync(RegisterInput input, CancellationToken cancellationToken = default)
+    private const string DefaultLearningGoal = "Giao tiep hang ngay";
+
+    public Task<AuthResult> RegisterAsync(RegisterInput input) =>
+        RegisterAsync(input, CancellationToken.None);
+
+    public async Task<AuthResult> RegisterAsync(
+        RegisterInput input,
+        CancellationToken cancellationToken = default)
     {
         var validation = Validate(input);
         if (validation is not null)
@@ -66,127 +58,164 @@ public sealed class DatabaseLearningAuthService(IAuthService authService) : ILea
             return AuthResult.Failure(validation);
         }
 
-        try
-        {
-            await authService.RegisterAsync(input.FullName.Trim(), input.Email.Trim(), input.Password);
-            return await LoginAsync(input.Email, input.Password, input.LearningGoal, "Dang ky thanh cong.");
-        }
-        catch (InvalidOperationException ex)
         var fullName = input.FullName.Trim();
         var email = input.Email.Trim();
-        var learningGoal = string.IsNullOrWhiteSpace(input.LearningGoal)
-            ? "Giao tiep hang ngay"
-            : input.LearningGoal.Trim();
+        var learningGoal = NormalizeLearningGoal(input.LearningGoal);
 
-        if (fullName.Length < 2)
+        try
+        {
+            await authService.RegisterAsync(
+                fullName,
+                email,
+                input.Password,
+                learningGoal,
+                cancellationToken);
+
+            return await LoginAsync(
+                email,
+                input.Password,
+                "Dang ky thanh cong. Chao mung ban den voi LinguaFlow!",
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
         {
             return AuthResult.Failure(ex.Message);
-            return AuthResult.Failure("Vui long nhap ho ten hop le.");
         }
     }
 
     public Task<AuthResult> SignInAsync(SignInInput input) =>
-        LoginAsync(input.Email, input.Password, "Giao tiep hang ngay", "Dang nhap thanh cong.");
+        SignInAsync(input, CancellationToken.None);
 
-    public async Task<bool> ExistsAsync(string email) =>
-        await authService.UserExistsAsync(email);
+    public Task<AuthResult> SignInAsync(
+        SignInInput input,
+        CancellationToken cancellationToken = default) =>
+        LoginAsync(input.Email, input.Password, "Dang nhap thanh cong.", cancellationToken);
+
+    public Task<bool> ExistsAsync(string email) =>
+        ExistsAsync(email, CancellationToken.None);
+
+    public async Task<bool> ExistsAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        return IsValidEmail(email.Trim())
+            && await authService.UserExistsAsync(email, cancellationToken);
+    }
+
+    public async Task<LearningUser?> FindByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsValidEmail(email.Trim()))
+        {
+            return null;
+        }
+
+        var user = await authService.FindByEmailAsync(email, cancellationToken);
+        return user is null ? null : ToLearningUser(user, string.Empty);
+    }
 
     private async Task<AuthResult> LoginAsync(
         string email,
         string password,
-        string learningGoal,
-        string successMessage)
+        string successMessage,
+        CancellationToken cancellationToken)
     {
-        if (!IsValidEmail(email))
+        if (!IsValidEmail(email.Trim()))
         {
             return AuthResult.Failure("Email khong hop le.");
         }
 
-        var context = httpContextAccessor.HttpContext;
-        var userAgent = context?.Request.Headers.UserAgent.ToString();
-        var device = new DeviceInfo(
-            GetDeviceName(userAgent),
-            context?.Connection.RemoteIpAddress?.ToString(),
-            userAgent);
-        var session = await authService.LoginAsync(email, password, device);
-        if (session is null)
+        if (password.Length < 6)
         {
-            return AuthResult.Failure("Email hoac mat khau khong dung.");
             return AuthResult.Failure("Mat khau can it nhat 6 ky tu.");
         }
 
-        if (!string.Equals(input.Password, input.ConfirmPassword, StringComparison.Ordinal))
-        {
-            return AuthResult.Failure("Mat khau xac nhan khong khop.");
-        }
+        var session = await authService.LoginAsync(
+            email,
+            password,
+            CreateDeviceInfo(),
+            cancellationToken);
+        return session is null
+            ? AuthResult.Failure("Email hoac mat khau khong dung.")
+            : AuthResult.Success(ToLearningUser(session.User, session.SessionToken), successMessage);
+    }
 
-        return AuthResult.Success(
-            new LearningUser(
-                session.User.Id,
-                session.User.FullName,
-                session.User.Email,
-                session.User.Role,
-                session.SessionToken,
-                learningGoal,
-                session.User.CreatedAt),
-            successMessage);
-        try
-        {
-            var user = await authService.RegisterAsync(fullName, email, input.Password, learningGoal, cancellationToken);
-            return AuthResult.Success(ToLearningUser(user), "Dang ky thanh cong. Chao mung ban den voi LinguaFlow!");
-        }
-        catch (InvalidOperationException ex)
-        {
-            return AuthResult.Failure(ex.Message);
-        }
+    private DeviceInfo CreateDeviceInfo()
+    {
+        var context = httpContextAccessor.HttpContext;
+        var userAgent = context?.Request.Headers.UserAgent.ToString();
+        return new DeviceInfo(
+            GetDeviceName(userAgent),
+            context?.Connection.RemoteIpAddress?.ToString(),
+            userAgent);
     }
 
     private static string? Validate(RegisterInput input)
-    public async Task<AuthResult> SignInAsync(SignInInput input, CancellationToken cancellationToken = default)
     {
         if (input.FullName.Trim().Length < 2)
         {
             return "Vui long nhap ho ten hop le.";
         }
-            return AuthResult.Failure("Email khong hop le.");
-        }
 
-        var user = await authService.ValidateUserAsync(email, input.Password, cancellationToken);
-        return user is null
-            ? AuthResult.Failure("Email hoac mat khau khong dung.")
-            : AuthResult.Success(ToLearningUser(user), "Dang nhap thanh cong.");
-    }
-
-        if (!IsValidEmail(input.Email))
-    public async Task<LearningUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
-    {
-        if (!IsValidEmail(email.Trim()))
+        if (!IsValidEmail(input.Email.Trim()))
         {
             return "Email khong hop le.";
-            return null;
         }
 
-        if (input.Password.Length < 8)
+        if (input.Password.Length < 6)
         {
-            return "Mat khau can it nhat 8 ky tu.";
+            return "Mat khau can it nhat 6 ky tu.";
         }
-        var user = await authService.FindByEmailAsync(email, cancellationToken);
-        return user is null ? null : ToLearningUser(user);
-    }
 
-        return input.Password != input.ConfirmPassword
+        return !string.Equals(input.Password, input.ConfirmPassword, StringComparison.Ordinal)
             ? "Mat khau xac nhan khong khop."
             : null;
-    private static LearningUser ToLearningUser(User user)
+    }
+
+    private static LearningUser ToLearningUser(User user, string sessionToken)
     {
-        return new LearningUser
+        return new LearningUser(
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            sessionToken,
+            NormalizeLearningGoal(user.LearningGoal),
+            user.CreatedAt);
+    }
+
+    private static string NormalizeLearningGoal(string learningGoal) =>
+        string.IsNullOrWhiteSpace(learningGoal) ? DefaultLearningGoal : learningGoal.Trim();
+
+    private static string GetDeviceName(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
         {
-            Id = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            LearningGoal = user.LearningGoal,
-            CreatedAt = user.CreatedAt
-        };
+            return "Trinh duyet";
+        }
+
+        if (userAgent.Contains("Edg", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Microsoft Edge";
+        }
+
+        if (userAgent.Contains("Chrome", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Google Chrome";
+        }
+
+        if (userAgent.Contains("Firefox", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Firefox";
+        }
+
+        if (userAgent.Contains("Safari", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Safari";
+        }
+
+        return "Trinh duyet";
     }
 
     private static bool IsValidEmail(string email)

@@ -1,3 +1,5 @@
+using LanguageLearning.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LanguageLearning.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(LanguageLearningDbContext))]
     [Migration("20260609000000_AddUserLearningGoal")]
     public partial class AddUserLearningGoal : Migration
     {

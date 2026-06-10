@@ -1,10 +1,6 @@
 <Project>
-  <Target Name="Build" Outputs="@(CollectedBuildOutput)">
-    <MSBuild
-      BuildInParallel="false"
-      Projects="@(ProjectReference)"
-      Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
-    </MSBuild>
-  </Target>
+  <PropertyGroup>
+    <!-- Keep solution builds sequential on machines where parallel MSBuild graph evaluation is unstable. -->
+    <BuildInParallel>false</BuildInParallel>
+  </PropertyGroup>
 </Project>

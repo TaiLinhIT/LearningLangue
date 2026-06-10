@@ -57,3 +57,28 @@ public interface ISentencePracticeService
         SentenceScoringRequest request,
         CancellationToken cancellationToken = default);
 }
+
+public interface ILearningExperienceService
+{
+    Task<IReadOnlyList<VocabularyLibraryItem>> GetVocabularyLibraryAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RankingEntry>> GetClassRankingAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RankingEntry>> GetCenterRankingAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RewardStatusItem>> GetRewardsAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<IpaSoundItem>> GetIpaSoundsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ClassOverview> GetClassOverviewAsync(
+        int userId,
+        CancellationToken cancellationToken = default);
+}

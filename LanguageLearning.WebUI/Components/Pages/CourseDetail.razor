@@ -1,5 +1,5 @@
 @page "/course/{Id:int}"
-@attribute [Authorize(Roles = "Learner,Admin")]
+@attribute [Authorize(Roles = "Student,Admin")]
 @layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
 

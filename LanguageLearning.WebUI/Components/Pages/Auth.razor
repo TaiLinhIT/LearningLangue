@@ -1,6 +1,5 @@
 @page "/login"
 @page "/auth"
-@inject NavigationManager Navigation
 
 <section class="app-section auth-page">
     <AuthorizeView>
@@ -10,16 +9,16 @@
                     <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" />
                 </div>
                 <div>
-                    <span class="eyebrow">Da dang nhap</span>
+                    <span class="eyebrow">Đã đăng nhập</span>
                     <h1>@GetDisplayName(authContext.User)</h1>
-                    <p>Ban dang hoc voi tai khoan @GetEmail(authContext.User). Tiep tuc vao ho so de xem muc tieu va tien do hoc tap.</p>
+                    <p>Bạn đang học với tài khoản @GetEmail(authContext.User). Tiếp tục vào hồ sơ để xem mục tiêu và tiến độ học tập.</p>
                     <div class="auth-inline-actions">
                         <MudButton Href="account"
                                    Variant="Variant.Filled"
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.AccountCircle"
                                    Class="duo-button">
-                            Xem tai khoan
+                            Xem tài khoản
                         </MudButton>
                         <form method="post" action="/auth/sign-out">
                             <MudButton ButtonType="ButtonType.Submit"
@@ -27,7 +26,7 @@
                                        Color="Color.Secondary"
                                        StartIcon="@Icons.Material.Filled.Logout"
                                        Class="duo-button secondary">
-                                Dang xuat
+                                Đăng xuất
                             </MudButton>
                         </form>
                     </div>
@@ -36,7 +35,7 @@
         </Authorized>
         <NotAuthorized>
             <div class="auth-modal-shell">
-                <div class="auth-modal" role="dialog" aria-labelledby="auth-title">
+                <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
                     <a class="auth-close" href="/" aria-label="Đóng">
                         <MudIcon Icon="@Icons.Material.Filled.Close" />
                     </a>
@@ -55,27 +54,17 @@
                         </MudAlert>
                     }
 
-            <div class="auth-grid">
-                <MudPaper Elevation="0" Class="@($"auth-card login-card {GetModeClass("login")}")">
-                    <div class="auth-card-header">
-                        <div class="auth-icon blue">
-                            <MudIcon Icon="@Icons.Material.Filled.Login" />
-                        </div>
-                        <div>
-                            <h2>Dang nhap</h2>
-                            <p>Tai khoan demo: learner@linguaflow.local / Learner@123</p>
-                        </div>
-                    </div>
-
-                    <form method="post" action="/auth/sign-in" class="auth-form">
-                        <label class="auth-label" for="login-email">Email</label>
-                        <input id="login-email"
-                               class="auth-input"
-                               name="email"
-                               type="email"
-                               autocomplete="email"
-                               placeholder="ban@example.com"
-                               required />
+                    @if (IsForgotMode)
+                    {
+                        <form method="post" action="/auth/forgot-password" class="auth-email-form auth-forgot-panel">
+                            <label class="auth-label" for="forgot-email">Email</label>
+                            <input id="forgot-email"
+                                   class="auth-input"
+                                   name="email"
+                                   type="email"
+                                   autocomplete="email"
+                                   placeholder="ban@example.com"
+                                   required />
 
                             <button class="auth-submit-button" type="submit">
                                 Gửi hướng dẫn
@@ -121,7 +110,7 @@
                                            class="auth-input"
                                            name="fullName"
                                            autocomplete="name"
-                                           placeholder="Nguyen Van A"
+                                           placeholder="Nguyễn Văn A"
                                            minlength="2"
                                            required />
 
@@ -142,30 +131,30 @@
                                         <option>Du học</option>
                                     </select>
 
-                        <div class="auth-two-fields">
-                            <div>
-                                <label class="auth-label" for="register-password">Mat khau</label>
-                                <input id="register-password"
-                                       class="auth-input"
-                                       name="password"
-                                       type="password"
-                                       autocomplete="new-password"
-                               minlength="8"
-                               placeholder="It nhat 8 ky tu"
-                                       required />
-                            </div>
-                            <div>
-                                <label class="auth-label" for="register-confirm">Nhap lai</label>
-                                <input id="register-confirm"
-                                       class="auth-input"
-                                       name="confirmPassword"
-                                       type="password"
-                                       autocomplete="new-password"
-                                       minlength="8"
-                                       placeholder="Nhap lai mat khau"
-                                       required />
-                            </div>
-                        </div>
+                                    <div class="auth-two-fields">
+                                        <div>
+                                            <label class="auth-label" for="register-password">Mật khẩu</label>
+                                            <input id="register-password"
+                                                   class="auth-input"
+                                                   name="password"
+                                                   type="password"
+                                                   autocomplete="new-password"
+                                                   minlength="6"
+                                                   placeholder="Ít nhất 6 ký tự"
+                                                   required />
+                                        </div>
+                                        <div>
+                                            <label class="auth-label" for="register-confirm">Nhập lại</label>
+                                            <input id="register-confirm"
+                                                   class="auth-input"
+                                                   name="confirmPassword"
+                                                   type="password"
+                                                   autocomplete="new-password"
+                                                   minlength="6"
+                                                   placeholder="Nhập lại mật khẩu"
+                                                   required />
+                                        </div>
+                                    </div>
 
                                     <button class="auth-submit-button" type="submit">
                                         Đăng ký tài khoản
@@ -270,8 +259,8 @@
             : Severity.Success;
 
     private static string GetDisplayName(ClaimsPrincipal user) =>
-        user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tai khoan";
+        user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tài khoản";
 
     private static string GetEmail(ClaimsPrincipal user) =>
-        user.FindFirstValue(ClaimTypes.Email) ?? "email chua cap nhat";
+        user.FindFirstValue(ClaimTypes.Email) ?? "email chưa cập nhật";
 }

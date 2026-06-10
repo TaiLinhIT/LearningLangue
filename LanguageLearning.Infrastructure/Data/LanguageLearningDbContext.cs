@@ -31,6 +31,7 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasIndex(x => x.Email).IsUnique();
+        modelBuilder.Entity<User>().Property(x => x.LearningGoal).HasMaxLength(180);
         modelBuilder.Entity<User>().Property(x => x.IsActive).HasDefaultValue(true);
         modelBuilder.Entity<UserSession>().HasIndex(x => x.SessionToken).IsUnique();
         modelBuilder.Entity<UserSession>()

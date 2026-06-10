@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
 using LanguageLearning.Application.Abstractions;
@@ -114,6 +115,16 @@ auth.MapPost("/login", async (
     IAuthService authService,
     CancellationToken cancellationToken) =>
 {
+    if (!IsValidEmail(request.Email))
+    {
+        return Results.BadRequest(new ApiResponse<object>(false, "Email khong hop le", null));
+    }
+
+    if (request.Password.Length < 6)
+    {
+        return Results.BadRequest(new ApiResponse<object>(false, "Mat khau can it nhat 6 ky tu", null));
+    }
+
     var device = new DeviceInfo(
         string.IsNullOrWhiteSpace(request.DeviceName) ? "API client" : request.DeviceName,
         httpContext.Connection.RemoteIpAddress?.ToString(),
@@ -150,31 +161,61 @@ auth.MapPost("/login", async (
             session.User.Id,
             session.User.FullName,
             session.User.Email,
-            session.User.Role)));
+            session.User.Role,
+            session.User.LearningGoal)));
 });
 auth.MapPost("/register", async (
     RegisterRequest request,
     IAuthService authService,
     CancellationToken cancellationToken) =>
 {
-    if (request.Password.Length < 8 || string.IsNullOrWhiteSpace(request.FullName))
+    var fullName = request.FullName.Trim();
+    if (fullName.Length < 2)
     {
         return Results.BadRequest(new ApiResponse<object>(
             false,
-            "Ho ten va mat khau toi thieu 8 ky tu la bat buoc",
+            "Vui long nhap ho ten hop le",
+            null));
+    }
+
+    if (!IsValidEmail(request.Email))
+    {
+        return Results.BadRequest(new ApiResponse<object>(
+            false,
+            "Email khong hop le",
+            null));
+    }
+
+    if (request.Password.Length < 6)
+    {
+        return Results.BadRequest(new ApiResponse<object>(
+            false,
+            "Mat khau can it nhat 6 ky tu",
+            null));
+    }
+
+    if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new ApiResponse<object>(
+            false,
+            "Mat khau xac nhan khong khop",
             null));
     }
 
     try
     {
         var user = await authService.RegisterAsync(
-            request.FullName,
+            fullName,
             request.Email,
             request.Password,
+            NormalizeLearningGoal(request.LearningGoal),
             cancellationToken);
         return Results.Created(
             $"/api/users/{user.Id}",
-            new ApiResponse<object>(true, "Tao tai khoan thanh cong", new { user.Id, user.FullName, user.Email }));
+            new ApiResponse<object>(
+                true,
+                "Tao tai khoan thanh cong",
+                new { user.Id, user.FullName, user.Email, user.Role, user.LearningGoal }));
     }
     catch (InvalidOperationException ex)
     {
@@ -201,6 +242,38 @@ auth.MapGet("/me", (ClaimsPrincipal principal) => Results.Ok(new ApiResponse<obj
         Email = principal.FindFirstValue(ClaimTypes.Email),
         Role = principal.FindFirstValue(ClaimTypes.Role)
     }))).RequireAuthorization();
+
+auth.MapPost("/forgot-password", async (
+    ForgotPasswordRequest request,
+    IAuthService authService,
+    CancellationToken cancellationToken) =>
+{
+    if (IsValidEmail(request.Email))
+    {
+        await authService.FindByEmailAsync(request.Email, cancellationToken);
+    }
+
+    return Results.Ok(new ApiResponse<object>(
+        true,
+        "Neu email ton tai, chung toi se gui huong dan khoi phuc mat khau",
+        null));
+});
+
+auth.MapPost("/external/{provider}", (string provider) =>
+{
+    var safeProvider = provider.ToLowerInvariant() switch
+    {
+        "google" => "Google",
+        "facebook" => "Facebook",
+        "github" => "Github",
+        _ => "nha cung cap nay"
+    };
+
+    return Results.Problem(
+        title: "External auth is not configured",
+        detail: $"Dang nhap voi {safeProvider} chua duoc cau hinh OAuth client id/secret.",
+        statusCode: StatusCodes.Status501NotImplemented);
+});
 
 app.MapGet("/api/languages", async (ILearningCatalogService catalog) =>
     Results.Ok(new ApiResponse<object>(true, "OK", await catalog.GetLanguagesAsync())));
@@ -262,87 +335,23 @@ app.MapGet("/api/admin/sessions", async (
     Results.Ok(new ApiResponse<object>(true, "OK", await authService.GetSessionsAsync(cancellationToken))))
     .RequireAuthorization(policy => policy.RequireRole(Roles.Admin));
 
-app.MapPost("/api/auth/login", async (ApiLoginRequest request, IAuthService authService, CancellationToken cancellationToken) =>
-{
-    if (!IsValidEmail(request.Email))
-    {
-        return Results.BadRequest(new ApiAuthMessage("Email khong hop le."));
-    }
-
-    var user = await authService.ValidateUserAsync(request.Email, request.Password, cancellationToken);
-    return user is null
-        ? Results.Unauthorized()
-        : Results.Ok(ToAuthResponse(user));
-});
-
-app.MapPost("/api/auth/register", async (ApiRegisterRequest request, IAuthService authService, CancellationToken cancellationToken) =>
-{
-    var fullName = request.FullName.Trim();
-    if (fullName.Length < 2)
-    {
-        return Results.BadRequest(new ApiAuthMessage("Vui long nhap ho ten hop le."));
-    }
-
-    if (!IsValidEmail(request.Email))
-    {
-        return Results.BadRequest(new ApiAuthMessage("Email khong hop le."));
-    }
-
-    if (request.Password.Length < 6)
-    {
-        return Results.BadRequest(new ApiAuthMessage("Mat khau can it nhat 6 ky tu."));
-    }
-
-    if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
-    {
-        return Results.BadRequest(new ApiAuthMessage("Mat khau xac nhan khong khop."));
-    }
-
-    try
-    {
-        var user = await authService.RegisterAsync(
-            fullName,
-            request.Email,
-            request.Password,
-            request.LearningGoal,
-            cancellationToken);
-
-        return Results.Created($"/api/users/{user.Id}", ToAuthResponse(user));
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.Conflict(new ApiAuthMessage(ex.Message));
-    }
-});
-
-app.MapPost("/api/auth/forgot-password", async (ApiForgotPasswordRequest request, IAuthService authService, CancellationToken cancellationToken) =>
-{
-    if (IsValidEmail(request.Email))
-    {
-        await authService.FindByEmailAsync(request.Email, cancellationToken);
-    }
-
-    return Results.Ok(new ApiAuthMessage("Neu email ton tai, chung toi se gui huong dan khoi phuc mat khau."));
-});
-
-app.MapPost("/api/auth/external/{provider}", (string provider) =>
-{
-    var safeProvider = provider.ToLowerInvariant() switch
-    {
-        "google" => "Google",
-        "facebook" => "Facebook",
-        "github" => "Github",
-        _ => "nha cung cap nay"
-    };
-
-    return Results.Problem(
-        title: "External auth is not configured",
-        detail: $"Dang nhap voi {safeProvider} chua duoc cau hinh OAuth client id/secret.",
-        statusCode: StatusCodes.Status501NotImplemented);
-});
-
 await LanguageLearningDbInitializer.InitializeAsync(app.Services);
 app.Run();
+
+static bool IsValidEmail(string email)
+{
+    try
+    {
+        return new MailAddress(email.Trim()).Address.Equals(email.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+    catch (FormatException)
+    {
+        return false;
+    }
+}
+
+static string NormalizeLearningGoal(string? learningGoal) =>
+    string.IsNullOrWhiteSpace(learningGoal) ? "Giao tiep hang ngay" : learningGoal.Trim();
 
 public sealed record ApiResponse<T>(bool Success, string Message, T? Data);
 public sealed record LoginRequest(string Email, string Password, string? DeviceName);
@@ -352,8 +361,15 @@ public sealed record LoginResponse(
     int UserId,
     string FullName,
     string Email,
-    string Role);
-public sealed record RegisterRequest(string FullName, string Email, string Password);
+    string Role,
+    string LearningGoal);
+public sealed record RegisterRequest(
+    string FullName,
+    string Email,
+    string Password,
+    string ConfirmPassword,
+    string? LearningGoal);
+public sealed record ForgotPasswordRequest(string Email);
 public sealed record QuizAnswersRequest(IReadOnlyDictionary<int, string> Answers);
 public sealed record SentencePracticeRequest(
     int LessonStepId,

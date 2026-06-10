@@ -108,6 +108,22 @@ app.MapPost("/auth/forgot-password", async (HttpContext httpContext, ILearningAu
     return RedirectToAuth("login", "success", message);
 }).DisableAntiforgery();
 
+app.MapPost("/auth/external/{provider}", (string provider) =>
+{
+    var safeProvider = provider.ToLowerInvariant() switch
+    {
+        "google" => "Google",
+        "facebook" => "Facebook",
+        "github" => "Github",
+        _ => "nha cung cap nay"
+    };
+
+    return RedirectToAuth(
+        "login",
+        "error",
+        $"Dang nhap voi {safeProvider} chua duoc cau hinh OAuth client id/secret.");
+}).DisableAntiforgery();
+
 app.MapPost("/auth/sign-out", async (HttpContext httpContext, IAuthService authService) =>
 {
     var userIdValue = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);

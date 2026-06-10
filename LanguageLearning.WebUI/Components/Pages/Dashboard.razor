@@ -3,14 +3,14 @@
 @page "/learning-goal"
 @page "/choose-language"
 @page "/placement-test"
-@attribute [Authorize(Roles = "Learner,Admin")]
+@attribute [Authorize(Roles = "Student,Admin")]
 @layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
 @inject AuthenticationStateProvider AuthState
 
 <section class="workspace-section">
     <div class="section-title">
-        <h1>Learner Dashboard</h1>
+        <h1>Student Dashboard</h1>
         <p>Continue your path, keep your daily streak, and unlock the next lesson.</p>
     </div>
 

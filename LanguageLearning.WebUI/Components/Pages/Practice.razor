@@ -3,14 +3,27 @@
 @page "/practice/listening"
 @page "/practice/speaking"
 @page "/practice/grammar"
+@page "/vocabulary"
 @page "/flashcards"
+@page "/dictionary"
 @page "/review-mistakes"
 @page "/leaderboard"
+@page "/ranking"
+@page "/class-ranking"
+@page "/center-ranking"
+@page "/rewards"
+@page "/ipa"
+@page "/ipa-pronunciation"
+@page "/listening"
+@page "/my-class"
+@page "/class-discussion"
 @page "/profile"
 @page "/subscription"
-@attribute [Authorize(Roles = "Learner,Admin")]
+@attribute [Authorize(Roles = "Student,Admin")]
+@rendermode InteractiveServer
 @layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
+@inject ILearningExperienceService Experience
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Navigation
 
@@ -20,15 +33,15 @@
         <p>@Subtitle</p>
     </div>
 
-    @if (Path.Contains("review-mistakes"))
+    @if (_isLoading)
     {
-        @if (_mistakes is null)
+        <div class="loading-state">Dang tai du lieu hoc tap...</div>
+    }
+    else if (IsReviewMode)
+    {
+        @if (_mistakes.Count == 0)
         {
-            <div class="loading-state">Loading mistakes...</div>
-        }
-        else if (_mistakes.Count == 0)
-        {
-            <div class="empty-state">No mistakes yet. Nice clean slate.</div>
+            <div class="empty-state">Chua co cau sai. Hay lam quiz de tao lich su on tap.</div>
         }
         else
         {
@@ -36,53 +49,310 @@
                 @foreach (var mistake in _mistakes)
                 {
                     <article class="cardx">
+                        <span class="pill">@mistake.Question?.Lesson?.Title</span>
                         <h3>@mistake.Question?.QuestionText</h3>
-                        <p class="muted">Your answer: @mistake.SelectedAnswer</p>
-                        <strong>Correct: @mistake.Question?.CorrectAnswer</strong>
+                        <p class="muted">Cau tra loi cua ban: @mistake.SelectedAnswer</p>
+                        <strong>Dap an dung: @mistake.Question?.CorrectAnswer</strong>
+                        <p>@mistake.Question?.Explanation</p>
                     </article>
                 }
             </div>
         }
     }
-    else if (Path.Contains("leaderboard"))
+    else if (IsRankingMode)
     {
-        <div class="leaderboard">
-            <div><strong>1</strong><span>Linh Nguyen</span><b>1240 XP</b></div>
-            <div><strong>2</strong><span>Minh Tran</span><b>1180 XP</b></div>
-            <div><strong>3</strong><span>Hana Lee</span><b>950 XP</b></div>
+        var rows = IsCenterRankingMode ? _centerRanking : _classRanking;
+        <div class="tool-tabs">
+            <a class="@GetTabClass("/class-ranking")" href="/class-ranking">Class Ranking</a>
+            <a class="@GetTabClass("/center-ranking")" href="/center-ranking">Center Ranking</a>
+        </div>
+
+        <div class="table-shell">
+            <table>
+                <thead>
+                    <tr><th>Rank</th><th>Student</th><th>XP</th><th>Quiz</th><th>AI</th><th>Completion</th><th>Total</th><th>Streak</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        <tr class="@(row.StudentId == _userId ? "highlight-row" : "")">
+                            <td><span class="rank-badge">@row.Rank</span></td>
+                            <td>@row.StudentName</td>
+                            <td>@row.XP</td>
+                            <td>@row.QuizScore</td>
+                            <td>@row.AIPracticeScore</td>
+                            <td>@row.CompletionPoint</td>
+                            <td><strong>@row.TotalPoint</strong></td>
+                            <td>@row.Streak ngay</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     }
-    else if (Path.Contains("profile") || Path.Contains("subscription"))
+    else if (IsRewardsMode)
+    {
+        <div class="grid grid-3">
+            @foreach (var reward in _rewards)
+            {
+                <article class="cardx reward-card">
+                    <span class="pill @(reward.Status == "Eligible" ? "green" : "yellow")">@reward.Status</span>
+                    <h3>@reward.Title</h3>
+                    <p>@reward.Description</p>
+                    <strong>@reward.Requirement</strong>
+                </article>
+            }
+        </div>
+    }
+    else if (IsIpaMode)
+    {
+        <div class="tool-tabs">
+            <button class="@GetSoundFilterClass("All")" @onclick="ShowAllSounds">All</button>
+            <button class="@GetSoundFilterClass("Vowel")" @onclick="ShowVowelSounds">Vowels</button>
+            <button class="@GetSoundFilterClass("Consonant")" @onclick="ShowConsonantSounds">Consonants</button>
+        </div>
+
+        <div class="grid grid-4">
+            @foreach (var sound in FilteredIpaSounds)
+            {
+                <article class="cardx ipa-card">
+                    <span class="pill">@sound.SoundType</span>
+                    <h3>@sound.Symbol</h3>
+                    <strong>@sound.ExampleWord</strong>
+                    <p>@sound.VietnameseGuide</p>
+                    <small>@sound.ComparisonNote</small>
+                </article>
+            }
+        </div>
+    }
+    else if (IsClassMode && _classOverview is not null)
     {
         <div class="grid grid-2">
-            <article class="cardx"><h3>Profile</h3><p>Avatar, full name, email, role, goal, and preferred language.</p></article>
-            <article class="cardx"><h3>Subscription</h3><p>Free, Plus, and Team plans with payment history.</p><a class="btn btn-primary" href="/pricing">Upgrade</a></article>
+            <article class="cardx">
+                <span class="pill green">@_classOverview.Level</span>
+                <h3>@_classOverview.ClassName</h3>
+                <p class="muted">Teacher: @_classOverview.TeacherName</p>
+                <p>@_classOverview.StartDate.ToString("dd/MM/yyyy") - @_classOverview.EndDate.ToString("dd/MM/yyyy")</p>
+            </article>
+            <article class="cardx">
+                <h3>Classmates</h3>
+                @foreach (var student in _classOverview.Students)
+                {
+                    <div class="compact-row">
+                        <span>@student.FullName</span>
+                        <strong>@student.XP XP</strong>
+                    </div>
+                }
+            </article>
         </div>
+
+        <div class="section-title mt-5">
+            <h2>Class Discussion</h2>
+        </div>
+        <div class="discussion-list">
+            @foreach (var comment in _classOverview.Comments)
+            {
+                <article class="cardx">
+                    <div class="compact-row">
+                        <strong>@comment.AuthorName</strong>
+                        @if (comment.IsPinned)
+                        {
+                            <span class="pill yellow">Pinned</span>
+                        }
+                    </div>
+                    <p>@comment.Content</p>
+                    @foreach (var reply in comment.Replies)
+                    {
+                        <div class="reply-row">
+                            <strong>@reply.AuthorName</strong>
+                            <span>@reply.Content</span>
+                        </div>
+                    }
+                </article>
+            }
+        </div>
+    }
+    else if (IsProfileMode)
+    {
+        <div class="grid grid-2">
+            <article class="cardx">
+                <h3>Profile</h3>
+                <div class="compact-row"><span>Full name</span><strong>@_userName</strong></div>
+                <div class="compact-row"><span>Email</span><strong>@_userEmail</strong></div>
+                <div class="compact-row"><span>Role</span><strong>@_userRole</strong></div>
+                <div class="compact-row"><span>Learning goal</span><strong>@_learningGoal</strong></div>
+            </article>
+            <article class="cardx">
+                <h3>Subscription</h3>
+                <p class="muted">Tai khoan demo co goi Plus duoc seed trong database. Ket noi thanh toan that co the gan vao trang nay sau.</p>
+                <a class="btn btn-primary" href="/pricing">Xem goi hoc</a>
+            </article>
+        </div>
+    }
+    else if (IsVocabularyMode)
+    {
+        <div class="filter-bar">
+            <input class="auth-input" placeholder="Tim tu, nghia hoac vi du" @bind="_searchText" @bind:event="oninput" />
+            <select class="auth-input" @bind="_levelFilter">
+                <option>All</option>
+                @foreach (var level in LevelOptions)
+                {
+                    <option>@level</option>
+                }
+            </select>
+            <select class="auth-input" @bind="_statusFilter">
+                <option>All</option>
+                @foreach (var status in StatusOptions)
+                {
+                    <option>@status</option>
+                }
+            </select>
+        </div>
+
+        @if (!FilteredVocabulary.Any())
+        {
+            <div class="empty-state">Khong co tu vung phu hop bo loc.</div>
+        }
+        else
+        {
+            <div class="grid grid-3">
+                @foreach (var word in FilteredVocabulary)
+                {
+                    <article class="cardx vocabulary-card">
+                        <span class="pill @GetStatusClass(word.Status)">@word.Status</span>
+                        <h3>@word.Word</h3>
+                        <strong>@word.Meaning</strong>
+                        <p>@word.ExampleSentence</p>
+                        <div class="compact-row"><span>@word.CourseTitle</span><b>@word.Level</b></div>
+                        <small>@word.Topic - @word.Pronunciation</small>
+                    </article>
+                }
+            </div>
+        }
     }
     else
     {
         <div class="grid grid-4">
-            <a class="practice-tile" href="/practice/vocabulary"><strong>Vocabulary Quiz</strong><span>Match words and meanings</span></a>
-            <a class="practice-tile" href="/practice/listening"><strong>Listening Quiz</strong><span>Audio prompts and dictation</span></a>
-            <a class="practice-tile" href="/practice/speaking"><strong>Speaking Practice</strong><span>Pronunciation confidence</span></a>
-            <a class="practice-tile" href="/practice/grammar"><strong>Grammar Quiz</strong><span>Patterns and corrections</span></a>
-        </div>
-        <div class="flashcard mt-4">
-            <div><strong>hello</strong><span>xin chao - Hello, my name is Linh.</span></div>
+            <a class="practice-tile" href="/vocabulary"><strong>Vocabulary Library</strong><span>Search, filter, review status</span></a>
+            <a class="practice-tile" href="/flashcards"><strong>Flashcards</strong><span>Review words from lessons</span></a>
+            <a class="practice-tile" href="/quiz/1"><strong>Quiz</strong><span>Submit answers and earn XP</span></a>
+            <a class="practice-tile" href="/ipa-pronunciation"><strong>IPA Pronunciation</strong><span>Vowels, consonants, sound pairs</span></a>
+            <a class="practice-tile" href="/my-class"><strong>My Class</strong><span>Teacher, classmates, discussion</span></a>
+            <a class="practice-tile" href="/class-ranking"><strong>Class Ranking</strong><span>XP, quiz, AI, completion</span></a>
+            <a class="practice-tile" href="/rewards"><strong>Rewards</strong><span>Eligibility and status</span></a>
+            <a class="practice-tile" href="/review-mistakes"><strong>Review Mistakes</strong><span>Retry missed quiz items</span></a>
         </div>
     }
 </section>
 
 @code {
-    private IReadOnlyList<UserAnswer>? _mistakes;
+    private bool _isLoading = true;
+    private int _userId;
+    private string _userName = "Student";
+    private string _userEmail = string.Empty;
+    private string _userRole = Roles.Student;
+    private string _learningGoal = "Giao tiep hang ngay";
+    private string _searchText = string.Empty;
+    private string _levelFilter = "All";
+    private string _statusFilter = "All";
+    private string _soundTypeFilter = "All";
+    private IReadOnlyList<UserAnswer> _mistakes = [];
+    private IReadOnlyList<VocabularyLibraryItem> _vocabulary = [];
+    private IReadOnlyList<RankingEntry> _classRanking = [];
+    private IReadOnlyList<RankingEntry> _centerRanking = [];
+    private IReadOnlyList<RewardStatusItem> _rewards = [];
+    private IReadOnlyList<IpaSoundItem> _ipaSounds = [];
+    private ClassOverview? _classOverview;
+
     private string Path => Navigation.ToBaseRelativePath(Navigation.Uri).ToLowerInvariant();
-    private string Title => Path.Contains("flashcards") ? "Flashcards" : Path.Contains("review-mistakes") ? "Review Mistakes" : Path.Contains("leaderboard") ? "Leaderboard" : Path.Contains("profile") ? "Profile" : Path.Contains("subscription") ? "Subscription" : "Practice";
-    private string Subtitle => "Focused learner tools for vocabulary, listening, speaking, grammar, and review.";
+    private bool IsReviewMode => Path.Contains("review-mistakes");
+    private bool IsRankingMode => Path.Contains("leaderboard") || Path.Contains("ranking");
+    private bool IsCenterRankingMode => Path.Contains("center-ranking");
+    private bool IsRewardsMode => Path.Contains("rewards");
+    private bool IsIpaMode => Path.Contains("ipa") || Path.Contains("listening");
+    private bool IsClassMode => Path.Contains("my-class") || Path.Contains("class-discussion");
+    private bool IsProfileMode => Path.Contains("profile") || Path.Contains("subscription");
+    private bool IsVocabularyMode => Path.Contains("vocabulary") || Path.Contains("flashcards") || Path.Contains("dictionary");
+
+    private string Title =>
+        IsReviewMode ? "Review Mistakes" :
+        IsCenterRankingMode ? "Center Ranking" :
+        IsRankingMode ? "Class Ranking" :
+        IsRewardsMode ? "Rewards" :
+        IsIpaMode ? "IPA Pronunciation" :
+        IsClassMode ? "My Class" :
+        IsProfileMode ? "Profile" :
+        IsVocabularyMode ? "Vocabulary Library" :
+        "Practice";
+
+    private string Subtitle =>
+        IsVocabularyMode ? "Tu vung duoc tong hop tu lesson va trang thai hoc cua ban." :
+        IsRankingMode ? "Bang xep hang tinh tu XP, diem quiz, AI practice, completion va streak." :
+        IsRewardsMode ? "Theo doi dieu kien nhan thuong cuoi khoa." :
+        IsIpaMode ? "On phat am bang phien am quoc te IPA." :
+        IsClassMode ? "Thong tin lop, ban hoc va khu thao luan." :
+        "Cong cu hoc tap tap trung cho hoc vien.";
+
+    private IEnumerable<string> LevelOptions => _vocabulary
+        .Select(x => x.Level)
+        .Distinct()
+        .OrderBy(x => x);
+
+    private IEnumerable<string> StatusOptions => _vocabulary
+        .Select(x => x.Status)
+        .Distinct()
+        .OrderBy(x => x);
+
+    private IEnumerable<VocabularyLibraryItem> FilteredVocabulary => _vocabulary
+        .Where(x => _levelFilter == "All" || x.Level == _levelFilter)
+        .Where(x => _statusFilter == "All" || x.Status == _statusFilter)
+        .Where(x => string.IsNullOrWhiteSpace(_searchText)
+            || x.Word.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+            || x.Meaning.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+            || (x.ExampleSentence?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private IEnumerable<IpaSoundItem> FilteredIpaSounds => _ipaSounds
+        .Where(x => _soundTypeFilter == "All" || x.SoundType == _soundTypeFilter);
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthState.GetAuthenticationStateAsync();
-        var userId = int.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        _mistakes = await Catalog.GetMistakesAsync(userId);
+        var user = auth.User;
+        _userId = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+        _userName = user.Identity?.Name ?? "Student";
+        _userEmail = user.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+        _userRole = user.FindFirstValue(ClaimTypes.Role) ?? Roles.Student;
+        _learningGoal = user.FindFirstValue("learning_goal") ?? "Giao tiep hang ngay";
+
+        _mistakes = await Catalog.GetMistakesAsync(_userId);
+        _vocabulary = await Experience.GetVocabularyLibraryAsync(_userId);
+        _classRanking = await Experience.GetClassRankingAsync(_userId);
+        _centerRanking = await Experience.GetCenterRankingAsync();
+        _rewards = await Experience.GetRewardsAsync(_userId);
+        _ipaSounds = await Experience.GetIpaSoundsAsync();
+        _classOverview = await Experience.GetClassOverviewAsync(_userId);
+        _isLoading = false;
     }
+
+    private string GetTabClass(string href) =>
+        Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase)
+            ? "active"
+            : string.Empty;
+
+    private string GetSoundFilterClass(string soundType) =>
+        _soundTypeFilter == soundType ? "active" : string.Empty;
+
+    private void ShowAllSounds() => _soundTypeFilter = "All";
+
+    private void ShowVowelSounds() => _soundTypeFilter = "Vowel";
+
+    private void ShowConsonantSounds() => _soundTypeFilter = "Consonant";
+
+    private static string GetStatusClass(string status) =>
+        status switch
+        {
+            "Mastered" => "green",
+            "Learning" => "yellow",
+            _ => string.Empty
+        };
 }
