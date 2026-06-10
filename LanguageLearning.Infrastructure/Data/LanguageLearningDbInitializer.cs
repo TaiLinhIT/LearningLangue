@@ -10,6 +10,7 @@ namespace LanguageLearning.Infrastructure.Data;
 public static class LanguageLearningDbInitializer
 {
     private const string InitialMigrationId = "20260608061602_InitialCreate";
+    private const string AddUserLearningGoalMigrationId = "20260609000000_AddUserLearningGoal";
     private const string InitialMigrationProductVersion = "8.0.22";
     private const string AdminEmail = "admin@linguaflow.local";
     private const string LearnerEmail = "learner@linguaflow.local";
@@ -102,6 +103,12 @@ public static class LanguageLearningDbInitializer
         return exception.InnerException is SqlException { Number: 2601 or 2627 };
     }
 
+    private static bool IsLearningGoalColumnAlreadyExists(SqlException exception)
+    {
+        return exception.Number == 2705
+            && exception.Message.Contains("LearningGoal", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static async Task EnsureDatabaseReadyAsync(LanguageLearningDbContext db)
     {
         if (await db.Database.CanConnectAsync() && await WasCreatedWithoutMigrationsAsync(db))
@@ -109,7 +116,30 @@ public static class LanguageLearningDbInitializer
             await MarkInitialMigrationAppliedAsync(db);
         }
 
-        await db.Database.MigrateAsync();
+        try
+        {
+            await db.Database.MigrateAsync();
+        }
+        catch (SqlException ex) when (IsLearningGoalColumnAlreadyExists(ex))
+        {
+            await MarkMigrationAppliedAsync(db, AddUserLearningGoalMigrationId);
+        }
+
+        await EnsureUserLearningGoalColumnAsync(db);
+        await MarkMigrationAppliedAsync(db, AddUserLearningGoalMigrationId);
+    }
+
+    private static Task EnsureUserLearningGoalColumnAsync(LanguageLearningDbContext db)
+    {
+        return db.Database.ExecuteSqlRawAsync(
+            """
+            IF COL_LENGTH(N'dbo.Users', N'LearningGoal') IS NULL
+            BEGIN
+                ALTER TABLE [Users]
+                ADD [LearningGoal] nvarchar(180) NOT NULL
+                    CONSTRAINT [DF_Users_LearningGoal] DEFAULT N'Giao tiep hang ngay';
+            END;
+            """);
     }
 
     private static async Task<bool> WasCreatedWithoutMigrationsAsync(LanguageLearningDbContext db)
@@ -132,6 +162,11 @@ public static class LanguageLearningDbInitializer
 
     private static Task MarkInitialMigrationAppliedAsync(LanguageLearningDbContext db)
     {
+        return MarkMigrationAppliedAsync(db, InitialMigrationId);
+    }
+
+    private static Task MarkMigrationAppliedAsync(LanguageLearningDbContext db, string migrationId)
+    {
         return db.Database.ExecuteSqlInterpolatedAsync(
             $"""
             IF OBJECT_ID(N'dbo.__EFMigrationsHistory', N'U') IS NULL
@@ -146,11 +181,11 @@ public static class LanguageLearningDbInitializer
             IF NOT EXISTS (
                 SELECT 1
                 FROM [__EFMigrationsHistory]
-                WHERE [MigrationId] = {InitialMigrationId}
+                WHERE [MigrationId] = {migrationId}
             )
             BEGIN
                 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-                VALUES ({InitialMigrationId}, {InitialMigrationProductVersion});
+                VALUES ({migrationId}, {InitialMigrationProductVersion});
             END;
             """);
     }
