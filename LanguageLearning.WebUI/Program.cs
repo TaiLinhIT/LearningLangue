@@ -15,6 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ILearningAuthService, DatabaseLearningAuthService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -25,6 +26,25 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/auth";
         options.ExpireTimeSpan = TimeSpan.FromDays(14);
         options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var sessionToken = context.Principal?.FindFirstValue("session_token");
+            if (!int.TryParse(userIdValue, out var userId)
+                || string.IsNullOrWhiteSpace(sessionToken))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync();
+                return;
+            }
+
+            var authService = context.HttpContext.RequestServices.GetRequiredService<IAuthService>();
+            if (!await authService.IsSessionActiveAsync(userId, sessionToken, context.HttpContext.RequestAborted))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync();
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -81,28 +101,21 @@ app.MapPost("/auth/forgot-password", async (HttpContext httpContext, ILearningAu
 {
     var form = await httpContext.Request.ReadFormAsync();
     var email = form["email"].ToString();
-    var message = await authService.FindByEmailAsync(email) is null
+    var message = !await authService.ExistsAsync(email)
         ? "Neu email ton tai, chung toi se gui huong dan khoi phuc mat khau."
         : "Da tao yeu cau khoi phuc mat khau cho tai khoan nay.";
 
     return RedirectToAuth("login", "success", message);
 }).DisableAntiforgery();
 
-app.MapPost("/auth/external/{provider}", (string provider) =>
+app.MapPost("/auth/sign-out", async (HttpContext httpContext, IAuthService authService) =>
 {
-    var safeProvider = provider.ToLowerInvariant() switch
+    var userIdValue = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var sessionToken = httpContext.User.FindFirstValue("session_token");
+    if (int.TryParse(userIdValue, out var userId) && !string.IsNullOrWhiteSpace(sessionToken))
     {
-        "google" => "Google",
-        "facebook" => "Facebook",
-        "github" => "Github",
-        _ => "nha cung cap nay"
-    };
-
-    return RedirectToAuth("login", "error", $"Dang nhap voi {safeProvider} chua duoc cau hinh. Vui long su dung email va mat khau.");
-}).DisableAntiforgery();
-
-app.MapPost("/auth/sign-out", async (HttpContext httpContext) =>
-{
+        await authService.LogoutAsync(userId, sessionToken, httpContext.RequestAborted);
+    }
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return RedirectToAuth("login", "success", "Ban da dang xuat.");
 }).DisableAntiforgery();
@@ -124,6 +137,8 @@ static async Task SignInUserAsync(HttpContext httpContext, LearningUser user, bo
         new(ClaimTypes.NameIdentifier, user.Id.ToString()),
         new(ClaimTypes.Name, user.FullName),
         new(ClaimTypes.Email, user.Email),
+        new(ClaimTypes.Role, user.Role),
+        new("session_token", user.SessionToken),
         new("learning_goal", user.LearningGoal),
         new("created_at", user.CreatedAt.ToString("O"))
     };

@@ -55,17 +55,27 @@
                         </MudAlert>
                     }
 
-                    @if (IsForgotMode)
-                    {
-                        <form method="post" action="/auth/forgot-password" class="auth-email-form auth-forgot-panel">
-                            <label class="auth-label" for="forgot-email">Email cần khôi phục</label>
-                            <input id="forgot-email"
-                                   class="auth-input"
-                                   name="email"
-                                   type="email"
-                                   autocomplete="email"
-                                   placeholder="ban@example.com"
-                                   required />
+            <div class="auth-grid">
+                <MudPaper Elevation="0" Class="@($"auth-card login-card {GetModeClass("login")}")">
+                    <div class="auth-card-header">
+                        <div class="auth-icon blue">
+                            <MudIcon Icon="@Icons.Material.Filled.Login" />
+                        </div>
+                        <div>
+                            <h2>Dang nhap</h2>
+                            <p>Tai khoan demo: learner@linguaflow.local / Learner@123</p>
+                        </div>
+                    </div>
+
+                    <form method="post" action="/auth/sign-in" class="auth-form">
+                        <label class="auth-label" for="login-email">Email</label>
+                        <input id="login-email"
+                               class="auth-input"
+                               name="email"
+                               type="email"
+                               autocomplete="email"
+                               placeholder="ban@example.com"
+                               required />
 
                             <button class="auth-submit-button" type="submit">
                                 Gửi hướng dẫn
@@ -132,30 +142,30 @@
                                         <option>Du học</option>
                                     </select>
 
-                                    <div class="auth-two-fields">
-                                        <div>
-                                            <label class="auth-label" for="register-password">Mật khẩu</label>
-                                            <input id="register-password"
-                                                   class="auth-input"
-                                                   name="password"
-                                                   type="password"
-                                                   autocomplete="new-password"
-                                                   minlength="6"
-                                                   placeholder="Ít nhất 6 ký tự"
-                                                   required />
-                                        </div>
-                                        <div>
-                                            <label class="auth-label" for="register-confirm">Nhập lại</label>
-                                            <input id="register-confirm"
-                                                   class="auth-input"
-                                                   name="confirmPassword"
-                                                   type="password"
-                                                   autocomplete="new-password"
-                                                   minlength="6"
-                                                   placeholder="Nhập lại mật khẩu"
-                                                   required />
-                                        </div>
-                                    </div>
+                        <div class="auth-two-fields">
+                            <div>
+                                <label class="auth-label" for="register-password">Mat khau</label>
+                                <input id="register-password"
+                                       class="auth-input"
+                                       name="password"
+                                       type="password"
+                                       autocomplete="new-password"
+                               minlength="8"
+                               placeholder="It nhat 8 ky tu"
+                                       required />
+                            </div>
+                            <div>
+                                <label class="auth-label" for="register-confirm">Nhap lai</label>
+                                <input id="register-confirm"
+                                       class="auth-input"
+                                       name="confirmPassword"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="8"
+                                       placeholder="Nhap lai mat khau"
+                                       required />
+                            </div>
+                        </div>
 
                                     <button class="auth-submit-button" type="submit">
                                         Đăng ký tài khoản

@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddScoped<ILearningCatalogService, LearningCatalogService>();
         services.AddScoped<IAdminLearningService, AdminLearningService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAIScoringService, MockAIScoringService>();
+        services.AddScoped<ISentencePracticeService, SentencePracticeService>();
 
         return services;
     }

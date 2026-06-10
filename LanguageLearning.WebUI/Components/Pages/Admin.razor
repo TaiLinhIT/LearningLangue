@@ -6,11 +6,13 @@
 @page "/admin/vocabulary"
 @page "/admin/payments"
 @page "/admin/reports"
+@page "/admin/sessions"
 @attribute [Authorize(Roles = "Admin")]
 @rendermode InteractiveServer
 @layout LanguageLearning.WebUI.Components.Layout.AdminLayout
 @inject IAdminLearningService AdminService
 @inject NavigationManager Navigation
+@inject IAuthService AuthService
 
 <section class="admin-section">
     <div class="section-title">
@@ -75,6 +77,26 @@
     {
         <div class="empty-state">Payment provider integration placeholder. Schema and admin route are ready.</div>
     }
+    else if (Path.Contains("sessions"))
+    {
+        <div class="table-shell">
+            <table>
+                <thead><tr><th>User</th><th>Device</th><th>IP</th><th>Login</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var session in _sessions)
+                {
+                    <tr>
+                        <td>@session.User?.Email</td>
+                        <td>@session.DeviceName</td>
+                        <td>@session.IpAddress</td>
+                        <td>@session.LoginAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><span class="tag">@(session.IsActive ? "Active" : "Ended")</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
     else if (Path.Contains("reports"))
     {
         <div class="stats-grid">
@@ -115,6 +137,7 @@
     private IReadOnlyList<Lesson> _lessons = [];
     private IReadOnlyList<Vocabulary> _vocabularyRows = [];
     private IReadOnlyList<Question> _questions = [];
+    private IReadOnlyList<UserSession> _sessions = [];
     private Course _course = new() { LanguageId = 1, Level = "A1", IsPublished = true };
     private Unit _unit = new() { CourseId = 1, SortOrder = 1 };
     private Lesson _lesson = new() { UnitId = 1, LessonType = LessonTypes.Vocabulary, XPReward = 20 };
@@ -134,6 +157,7 @@
         _lessons = await AdminService.GetLessonsAsync();
         _vocabularyRows = await AdminService.GetVocabularyAsync();
         _questions = await AdminService.GetQuestionsAsync();
+        _sessions = await AuthService.GetSessionsAsync();
     }
 
     private async Task SaveCourseAsync() { await AdminService.SaveCourseAsync(_course); _course = new() { LanguageId = 1, Level = "A1", IsPublished = true }; await LoadAsync(); }

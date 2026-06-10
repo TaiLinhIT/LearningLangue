@@ -35,4 +35,25 @@ public interface IAuthService
     Task<User?> ValidateUserAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<User> RegisterAsync(string fullName, string email, string password, string learningGoal, CancellationToken cancellationToken = default);
+    Task<AuthSession?> LoginAsync(string email, string password, DeviceInfo device, CancellationToken cancellationToken = default);
+    Task LogoutAsync(int userId, string sessionToken, CancellationToken cancellationToken = default);
+    Task<bool> IsSessionActiveAsync(int userId, string sessionToken, CancellationToken cancellationToken = default);
+    Task<bool> UserExistsAsync(string email, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IAIScoringService
+{
+    Task<AIScoringResponse> ScoreAsync(
+        string sentence,
+        string grammarStructure,
+        IReadOnlyList<string> vocabulary,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ISentencePracticeService
+{
+    Task<AIScoringResult> SubmitAsync(
+        SentenceScoringRequest request,
+        CancellationToken cancellationToken = default);
 }

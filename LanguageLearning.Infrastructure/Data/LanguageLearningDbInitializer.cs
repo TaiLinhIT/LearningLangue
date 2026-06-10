@@ -12,8 +12,6 @@ public static class LanguageLearningDbInitializer
     private const string InitialMigrationId = "20260608061602_InitialCreate";
     private const string AddUserLearningGoalMigrationId = "20260609000000_AddUserLearningGoal";
     private const string InitialMigrationProductVersion = "8.0.22";
-    private const string AdminEmail = "admin@linguaflow.local";
-    private const string LearnerEmail = "learner@linguaflow.local";
 
     public static async Task InitializeAsync(IServiceProvider services)
     {
@@ -22,10 +20,12 @@ public static class LanguageLearningDbInitializer
         await EnsureDatabaseReadyAsync(db);
 
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-
         var hasher = new PasswordHasher<User>();
-        await EnsureUserAsync(db, hasher, "Admin", AdminEmail, Roles.Admin, "https://i.pravatar.cc/120?img=12", "Quan tri he thong", "Admin@123");
-        var learner = await EnsureUserAsync(db, hasher, "Linh Nguyen", LearnerEmail, Roles.Learner, "https://i.pravatar.cc/120?img=32", "Giao tiep hang ngay", "Learner@123");
+
+        await EnsureUserAsync(db, hasher, "Admin", "admin@linguaflow.local", Roles.Admin, "https://i.pravatar.cc/120?img=12", "Quan tri he thong", "Admin@123");
+        var learner = await EnsureUserAsync(db, hasher, "Linh Nguyen", "learner@linguaflow.local", Roles.Learner, "https://i.pravatar.cc/120?img=32", "Giao tiep hang ngay", "Learner@123");
+        await EnsureUserAsync(db, hasher, "Teacher Demo", "teacher@linguaflow.local", Roles.Teacher, null, "Giang day khoa hoc", "Teacher@123");
+        await EnsureUserAsync(db, hasher, "Receptionist Demo", "reception@linguaflow.local", Roles.Receptionist, null, "Cham soc hoc vien", "Reception@123");
 
         await EnsureLearnerSeedDataAsync(db, learner.Id);
         await transaction.CommitAsync();
@@ -37,30 +37,47 @@ public static class LanguageLearningDbInitializer
         string fullName,
         string email,
         string role,
-        string avatarUrl,
+        string? avatarUrl,
         string learningGoal,
         string password)
     {
-        var existingUser = await db.Users.FirstOrDefaultAsync(x => x.Email == email);
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var existingUser = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail);
         if (existingUser is not null)
         {
+            var changed = false;
             if (string.IsNullOrWhiteSpace(existingUser.LearningGoal))
             {
                 existingUser.LearningGoal = learningGoal;
+                changed = true;
+            }
+
+            if (!existingUser.IsActive)
+            {
+                existingUser.IsActive = true;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                existingUser.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync();
             }
 
             return existingUser;
         }
 
+        var now = DateTime.UtcNow;
         var user = new User
         {
             FullName = fullName,
-            Email = email,
+            Email = normalizedEmail,
             Role = role,
             AvatarUrl = avatarUrl,
             LearningGoal = learningGoal,
-            CreatedAt = DateTime.UtcNow
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now
         };
         user.PasswordHash = hasher.HashPassword(user, password);
 
@@ -74,7 +91,7 @@ public static class LanguageLearningDbInitializer
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             db.Entry(user).State = EntityState.Detached;
-            return await db.Users.FirstAsync(x => x.Email == email);
+            return await db.Users.FirstAsync(x => x.Email == normalizedEmail);
         }
     }
 
@@ -113,7 +130,7 @@ public static class LanguageLearningDbInitializer
     {
         if (await db.Database.CanConnectAsync() && await WasCreatedWithoutMigrationsAsync(db))
         {
-            await MarkInitialMigrationAppliedAsync(db);
+            await MarkMigrationAppliedAsync(db, InitialMigrationId);
         }
 
         try
@@ -158,11 +175,6 @@ public static class LanguageLearningDbInitializer
             """).SingleAsync();
 
         return hasLegacySchema == 1;
-    }
-
-    private static Task MarkInitialMigrationAppliedAsync(LanguageLearningDbContext db)
-    {
-        return MarkMigrationAppliedAsync(db, InitialMigrationId);
     }
 
     private static Task MarkMigrationAppliedAsync(LanguageLearningDbContext db, string migrationId)
