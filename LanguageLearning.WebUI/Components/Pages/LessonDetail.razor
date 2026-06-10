@@ -1,12 +1,15 @@
 @page "/lesson/{Id:int}"
-@attribute [Authorize(Roles = "Learner,Admin")]
+@attribute [Authorize(Roles = "Student,Admin")]
+@rendermode InteractiveServer
 @layout LanguageLearning.WebUI.Components.Layout.LearnerLayout
 @inject ILearningCatalogService Catalog
+@inject ISentencePracticeService SentencePracticeService
+@inject AuthenticationStateProvider AuthState
 
 <section class="workspace-section">
     @if (_lesson is null)
     {
-        <div class="loading-state">Loading lesson...</div>
+        <div class="loading-state">Dang tai bai hoc...</div>
     }
     else
     {
@@ -14,32 +17,131 @@
             <span class="pill">@_lesson.LessonType</span>
             <h1>@_lesson.Title</h1>
             <p>@_lesson.Description</p>
-            <div class="hero-actions">
-                <a class="btn btn-primary" href="/quiz/@_lesson.Id">Start quiz</a>
-                <a class="btn btn-light" href="/practice">Practice</a>
+            <div class="progress-shell">
+                <div style="width:@ProgressPercent%"></div>
             </div>
+            <small>Buoc @(_activeStepIndex + 1)/@_steps.Count</small>
         </div>
 
-        <div class="grid grid-2">
-            <article class="cardx">
-                <h3>Learn Vocabulary</h3>
-                @foreach (var word in _lesson.Vocabulary)
+        <div class="lesson-player">
+            <aside class="lesson-step-list" aria-label="Cac buoc bai hoc">
+                @for (var index = 0; index < _steps.Count; index++)
                 {
-                    <div class="vocab-row">
-                        <strong>@word.Word</strong>
-                        <span>@word.Meaning</span>
-                        <small>@word.ExampleSentence</small>
+                    var stepIndex = index;
+                    var step = _steps[index];
+                    var isLocked = index > _unlockedStepIndex;
+                    var isComplete = index < _activeStepIndex;
+                    <button class="lesson-step-button @(index == _activeStepIndex ? "active" : "") @(isComplete ? "complete" : "")"
+                            disabled="@isLocked"
+                            @onclick="() => OpenStep(stepIndex)">
+                        <span>@(isComplete ? "✓" : (index + 1).ToString())</span>
+                        <div>
+                            <strong>@step.Title</strong>
+                            <small>@(isLocked ? "Chua mo khoa" : step.StepType)</small>
+                        </div>
+                    </button>
+                }
+            </aside>
+
+            <article class="cardx lesson-step-content">
+                @{
+                    var activeStep = _steps[_activeStepIndex];
+                }
+                <span class="pill">@activeStep.StepType</span>
+                <h2>@activeStep.Title</h2>
+                <p class="muted">@activeStep.Description</p>
+
+                @if (activeStep.StepType == LessonStepTypes.Video)
+                {
+                    <div class="lesson-video-placeholder">
+                        <strong>Video comprehensible input</strong>
+                        <span>Video va phu de se duoc phat tu ContentUrl cua lesson step.</span>
+                    </div>
+                    <h3>Tu vung trong video</h3>
+                    <div class="vocab-preview-grid">
+                        @foreach (var word in _lesson.Vocabulary)
+                        {
+                            <div><strong>@word.Word</strong><span>@word.Meaning</span></div>
+                        }
                     </div>
                 }
-            </article>
-            <article class="cardx">
-                <h3>Practice Modes</h3>
-                <div class="practice-grid">
-                    <a href="/practice/vocabulary">Vocabulary Quiz</a>
-                    <a href="/practice/listening">Listening Quiz</a>
-                    <a href="/practice/speaking">Speaking Practice</a>
-                    <a href="/practice/grammar">Grammar Quiz</a>
-                </div>
+                else if (activeStep.StepType == LessonStepTypes.Flashcards)
+                {
+                    <div class="flashcard-study">
+                        @foreach (var word in _lesson.Vocabulary)
+                        {
+                            <div class="study-card">
+                                <strong>@word.Word</strong>
+                                <span>@word.Pronunciation</span>
+                                <p>@word.Meaning</p>
+                                <small>@word.ExampleSentence</small>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (activeStep.StepType == LessonStepTypes.Grammar)
+                {
+                    <div class="grammar-callout">
+                        <strong>My name is + ten.</strong>
+                        <p>Su dung mau cau nay de gioi thieu ten cua ban mot cach tu nhien.</p>
+                        <span>Example: My name is Linh.</span>
+                    </div>
+                }
+                else if (activeStep.StepType == LessonStepTypes.Quiz)
+                {
+                    <p>Quiz phai dat toi thieu @activeStep.MinScoreToPass diem de mo khoa buoc tiep theo.</p>
+                    <a class="btn btn-primary" href="/quiz/@_lesson.Id">Lam quiz</a>
+                }
+                else if (activeStep.StepType == LessonStepTypes.Exercise)
+                {
+                    <div class="grammar-callout">
+                        <strong>Hoan thanh cau:</strong>
+                        <p>Hello, my ___ is An.</p>
+                        <span>Dap an: name</span>
+                    </div>
+                }
+                else if (activeStep.StepType == LessonStepTypes.SentencePractice)
+                {
+                    <label class="auth-label" for="student-sentence">Dat mot cau gioi thieu ban than</label>
+                    <textarea id="student-sentence"
+                              class="auth-input sentence-input"
+                              @bind="_studentSentence"
+                              placeholder="Vi du: My name is Minh."></textarea>
+                    <button class="btn btn-primary"
+                            disabled="@_isScoring"
+                            @onclick="SubmitSentenceAsync">
+                        @(_isScoring ? "Dang cham diem..." : "Gui AI cham diem")
+                    </button>
+
+                    @if (_aiResult is not null)
+                    {
+                        <div class="ai-result">
+                            <div><span>Grammar</span><strong>@_aiResult.GrammarScore</strong></div>
+                            <div><span>Vocabulary</span><strong>@_aiResult.VocabularyScore</strong></div>
+                            <div><span>Naturalness</span><strong>@_aiResult.NaturalnessScore</strong></div>
+                            <div class="overall"><span>Overall</span><strong>@_aiResult.OverallScore</strong></div>
+                            <p>@_aiResult.Feedback</p>
+                            <p><strong>Goi y:</strong> @_aiResult.SuggestedSentence</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="result-summary">
+                        <strong>Hoan thanh bai hoc</strong>
+                        <p>Quiz, bai tap va diem AI duoc tong hop de cap nhat XP va mo khoa bai tiep theo.</p>
+                        <a class="btn btn-primary" href="/progress">Xem tien do</a>
+                    </div>
+                }
+
+                @if (activeStep.StepType != LessonStepTypes.Quiz
+                    && activeStep.StepType != LessonStepTypes.SentencePractice
+                    && _activeStepIndex < _steps.Count - 1)
+                {
+                    <button class="btn btn-primary mt-4" @onclick="CompleteCurrentStep">
+                        Hoan thanh va tiep tuc
+                    </button>
+                }
             </article>
         </div>
     }
@@ -47,10 +149,76 @@
 
 @code {
     [Parameter] public int Id { get; set; }
+
     private Lesson? _lesson;
+    private IReadOnlyList<LessonStep> _steps = [];
+    private int _activeStepIndex;
+    private int _unlockedStepIndex;
+    private bool _isScoring;
+    private string _studentSentence = string.Empty;
+    private AIScoringResult? _aiResult;
+
+    private int ProgressPercent => _steps.Count == 0
+        ? 0
+        : (int)Math.Round((_activeStepIndex + 1) * 100m / _steps.Count);
 
     protected override async Task OnParametersSetAsync()
     {
         _lesson = await Catalog.GetLessonAsync(Id);
+        _steps = _lesson?.Steps.OrderBy(x => x.SortOrder).ToList() ?? [];
+        if (_steps.Count == 0 && _lesson is not null)
+        {
+            _steps =
+            [
+                new LessonStep
+                {
+                    Id = 0,
+                    LessonId = _lesson.Id,
+                    StepType = LessonStepTypes.Quiz,
+                    Title = "Quiz bai hoc",
+                    Description = "Hoan thanh quiz de nhan XP.",
+                    MinScoreToPass = 70
+                }
+            ];
+        }
+    }
+
+    private void OpenStep(int index)
+    {
+        if (index <= _unlockedStepIndex)
+        {
+            _activeStepIndex = index;
+        }
+    }
+
+    private void CompleteCurrentStep()
+    {
+        _unlockedStepIndex = Math.Min(_steps.Count - 1, _activeStepIndex + 1);
+        _activeStepIndex = _unlockedStepIndex;
+    }
+
+    private async Task SubmitSentenceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_studentSentence) || _lesson is null)
+        {
+            return;
+        }
+
+        _isScoring = true;
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var userId = int.Parse(auth.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+        var step = _steps[_activeStepIndex];
+        _aiResult = await SentencePracticeService.SubmitAsync(new SentenceScoringRequest(
+            userId,
+            step.Id,
+            _studentSentence,
+            "My name is + name",
+            _lesson.Vocabulary.Select(x => x.Word).ToList()));
+        _isScoring = false;
+
+        if (_aiResult.OverallScore >= step.MinScoreToPass)
+        {
+            _unlockedStepIndex = Math.Min(_steps.Count - 1, _activeStepIndex + 1);
+        }
     }
 }

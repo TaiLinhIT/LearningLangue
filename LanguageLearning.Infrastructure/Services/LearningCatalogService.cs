@@ -46,6 +46,7 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
             .Include(x => x.Unit)
             .ThenInclude(x => x!.Course)
             .Include(x => x.Vocabulary)
+            .Include(x => x.Steps.OrderBy(x => x.SortOrder))
             .Include(x => x.Questions)
             .ThenInclude(x => x.Options)
             .AsNoTracking()

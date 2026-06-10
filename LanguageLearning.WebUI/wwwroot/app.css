@@ -1166,6 +1166,141 @@ a:hover {
     transform: translateY(-1px);
 }
 
+.lesson-player {
+    align-items: start;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(230px, .34fr) minmax(0, 1fr);
+    margin-top: 1rem;
+}
+
+.lesson-step-list {
+    display: grid;
+    gap: .65rem;
+}
+
+.lesson-step-button {
+    align-items: center;
+    background: #fff;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    display: grid;
+    gap: .7rem;
+    grid-template-columns: 38px 1fr;
+    padding: .75rem;
+    text-align: left;
+}
+
+.lesson-step-button > span {
+    align-items: center;
+    background: #eef8ff;
+    border-radius: 50%;
+    display: flex;
+    font-weight: 900;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+.lesson-step-button small,
+.lesson-step-button strong {
+    display: block;
+}
+
+.lesson-step-button.active {
+    border-color: var(--blue);
+    box-shadow: 0 5px 0 #caeafa;
+}
+
+.lesson-step-button.complete > span {
+    background: var(--green);
+}
+
+.lesson-step-button:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+}
+
+.lesson-step-content {
+    min-height: 520px;
+}
+
+.lesson-video-placeholder {
+    align-items: center;
+    background: linear-gradient(135deg, #14243a, #244a6d);
+    border-radius: 8px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 260px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.vocab-preview-grid,
+.flashcard-study {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 1rem 0;
+}
+
+.vocab-preview-grid div,
+.study-card,
+.grammar-callout,
+.ai-result,
+.result-summary {
+    background: #f8fbff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.vocab-preview-grid span,
+.study-card span,
+.study-card small {
+    display: block;
+}
+
+.sentence-input {
+    min-height: 130px;
+    margin-bottom: 1rem;
+    resize: vertical;
+}
+
+.ai-result {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 1rem;
+}
+
+.ai-result div {
+    background: #fff;
+    border-radius: 8px;
+    padding: .75rem;
+    text-align: center;
+}
+
+.ai-result span,
+.ai-result strong {
+    display: block;
+}
+
+.ai-result strong {
+    font-size: 1.4rem;
+}
+
+.ai-result .overall {
+    background: #effce7;
+}
+
+.ai-result p {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
 .answer-button {
     background: #fff;
     border: 1px solid var(--line);
@@ -1269,6 +1404,13 @@ a:hover {
     .auth-two-fields,
     .auth-signed-in-panel,
     .account-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-player,
+    .vocab-preview-grid,
+    .flashcard-study,
+    .ai-result {
         grid-template-columns: 1fr;
     }
 

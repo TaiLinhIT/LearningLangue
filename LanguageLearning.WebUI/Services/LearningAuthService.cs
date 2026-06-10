@@ -1,16 +1,14 @@
-using System.Collections.Concurrent;
 using System.Net.Mail;
-using System.Security.Cryptography;
+using LanguageLearning.Application.Abstractions;
+using LanguageLearning.Domain;
 
 namespace LanguageLearning.WebUI.Services;
 
 public interface ILearningAuthService
 {
     Task<AuthResult> RegisterAsync(RegisterInput input);
-
     Task<AuthResult> SignInAsync(SignInInput input);
-
-    LearningUser? FindByEmail(string email);
+    Task<bool> ExistsAsync(string email);
 }
 
 public sealed record RegisterInput(
@@ -25,124 +23,106 @@ public sealed record SignInInput(string Email, string Password);
 public sealed record AuthResult(bool Succeeded, string Message, LearningUser? User = null)
 {
     public static AuthResult Success(LearningUser user, string message) => new(true, message, user);
-
     public static AuthResult Failure(string message) => new(false, message);
 }
 
-public sealed class LearningUser
+public sealed record LearningUser(
+    int Id,
+    string FullName,
+    string Email,
+    string Role,
+    string SessionToken,
+    string LearningGoal,
+    DateTimeOffset CreatedAt);
+
+public sealed class DatabaseLearningAuthService(
+    IAuthService authService,
+    IHttpContextAccessor httpContextAccessor) : ILearningAuthService
 {
-    public required Guid Id { get; init; }
-
-    public required string FullName { get; init; }
-
-    public required string Email { get; init; }
-
-    public required string PasswordHash { get; init; }
-
-    public required string LearningGoal { get; init; }
-
-    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset? LastSignedInAt { get; set; }
-}
-
-public sealed class InMemoryLearningAuthService : ILearningAuthService
-{
-    private const int SaltSize = 16;
-    private const int KeySize = 32;
-    private const int Iterations = 120_000;
-
-    private readonly ConcurrentDictionary<string, LearningUser> _users = new(StringComparer.OrdinalIgnoreCase);
-
-    public InMemoryLearningAuthService()
+    public async Task<AuthResult> RegisterAsync(RegisterInput input)
     {
-        var demo = new LearningUser
+        var validation = Validate(input);
+        if (validation is not null)
         {
-            Id = Guid.Parse("5ee44aa1-70a3-44e4-910e-76d2a6f88d43"),
-            FullName = "Nguyen Linh",
-            Email = "linh@example.com",
-            LearningGoal = "Giao tiep hang ngay",
-            PasswordHash = HashPassword("Demo@123")
-        };
-
-        _users[NormalizeEmail(demo.Email)] = demo;
-    }
-
-    public Task<AuthResult> RegisterAsync(RegisterInput input)
-    {
-        var fullName = input.FullName.Trim();
-        var email = input.Email.Trim();
-        var learningGoal = string.IsNullOrWhiteSpace(input.LearningGoal)
-            ? "Giao tiep hang ngay"
-            : input.LearningGoal.Trim();
-
-        if (fullName.Length < 2)
-        {
-            return Task.FromResult(AuthResult.Failure("Vui long nhap ho ten hop le."));
+            return AuthResult.Failure(validation);
         }
 
+        try
+        {
+            await authService.RegisterAsync(input.FullName.Trim(), input.Email.Trim(), input.Password);
+            return await LoginAsync(input.Email, input.Password, input.LearningGoal, "Dang ky thanh cong.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return AuthResult.Failure(ex.Message);
+        }
+    }
+
+    public Task<AuthResult> SignInAsync(SignInInput input) =>
+        LoginAsync(input.Email, input.Password, "Giao tiep hang ngay", "Dang nhap thanh cong.");
+
+    public async Task<bool> ExistsAsync(string email) =>
+        await authService.UserExistsAsync(email);
+
+    private async Task<AuthResult> LoginAsync(
+        string email,
+        string password,
+        string learningGoal,
+        string successMessage)
+    {
         if (!IsValidEmail(email))
         {
-            return Task.FromResult(AuthResult.Failure("Email khong hop le."));
+            return AuthResult.Failure("Email khong hop le.");
         }
 
-        if (input.Password.Length < 6)
+        var context = httpContextAccessor.HttpContext;
+        var userAgent = context?.Request.Headers.UserAgent.ToString();
+        var device = new DeviceInfo(
+            GetDeviceName(userAgent),
+            context?.Connection.RemoteIpAddress?.ToString(),
+            userAgent);
+        var session = await authService.LoginAsync(email, password, device);
+        if (session is null)
         {
-            return Task.FromResult(AuthResult.Failure("Mat khau can it nhat 6 ky tu."));
+            return AuthResult.Failure("Email hoac mat khau khong dung.");
         }
 
-        if (!string.Equals(input.Password, input.ConfirmPassword, StringComparison.Ordinal))
-        {
-            return Task.FromResult(AuthResult.Failure("Mat khau xac nhan khong khop."));
-        }
-
-        var normalizedEmail = NormalizeEmail(email);
-        var user = new LearningUser
-        {
-            Id = Guid.NewGuid(),
-            FullName = fullName,
-            Email = email,
-            LearningGoal = learningGoal,
-            PasswordHash = HashPassword(input.Password),
-            LastSignedInAt = DateTimeOffset.UtcNow
-        };
-
-        return Task.FromResult(_users.TryAdd(normalizedEmail, user)
-            ? AuthResult.Success(user, "Dang ky thanh cong. Chao mung ban den voi LinguaFlow!")
-            : AuthResult.Failure("Email nay da duoc dang ky."));
+        return AuthResult.Success(
+            new LearningUser(
+                session.User.Id,
+                session.User.FullName,
+                session.User.Email,
+                session.User.Role,
+                session.SessionToken,
+                learningGoal,
+                session.User.CreatedAt),
+            successMessage);
     }
 
-    public Task<AuthResult> SignInAsync(SignInInput input)
+    private static string? Validate(RegisterInput input)
     {
-        var email = input.Email.Trim();
-
-        if (!IsValidEmail(email))
+        if (input.FullName.Trim().Length < 2)
         {
-            return Task.FromResult(AuthResult.Failure("Email khong hop le."));
+            return "Vui long nhap ho ten hop le.";
         }
 
-        if (!_users.TryGetValue(NormalizeEmail(email), out var user)
-            || !VerifyPassword(input.Password, user.PasswordHash))
+        if (!IsValidEmail(input.Email))
         {
-            return Task.FromResult(AuthResult.Failure("Email hoac mat khau khong dung."));
+            return "Email khong hop le.";
         }
 
-        user.LastSignedInAt = DateTimeOffset.UtcNow;
-        return Task.FromResult(AuthResult.Success(user, "Dang nhap thanh cong."));
-    }
+        if (input.Password.Length < 8)
+        {
+            return "Mat khau can it nhat 8 ky tu.";
+        }
 
-    public LearningUser? FindByEmail(string email)
-    {
-        return _users.TryGetValue(NormalizeEmail(email), out var user) ? user : null;
+        return input.Password != input.ConfirmPassword
+            ? "Mat khau xac nhan khong khop."
+            : null;
     }
 
     private static bool IsValidEmail(string email)
     {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return false;
-        }
-
         try
         {
             return new MailAddress(email).Address.Equals(email, StringComparison.OrdinalIgnoreCase);
@@ -153,33 +133,23 @@ public sealed class InMemoryLearningAuthService : ILearningAuthService
         }
     }
 
-    private static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
-
-    private static string HashPassword(string password)
+    private static string GetDeviceName(string? userAgent)
     {
-        Span<byte> salt = stackalloc byte[SaltSize];
-        RandomNumberGenerator.Fill(salt);
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt.ToArray(), Iterations, HashAlgorithmName.SHA256);
-        var key = pbkdf2.GetBytes(KeySize);
-
-        return $"v1.{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(key)}";
-    }
-
-    private static bool VerifyPassword(string password, string passwordHash)
-    {
-        var parts = passwordHash.Split('.', 4);
-        if (parts.Length != 4 || parts[0] != "v1" || !int.TryParse(parts[1], out var iterations))
+        if (string.IsNullOrWhiteSpace(userAgent))
         {
-            return false;
+            return "Unknown device";
         }
 
-        var salt = Convert.FromBase64String(parts[2]);
-        var expectedKey = Convert.FromBase64String(parts[3]);
-
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
-        var actualKey = pbkdf2.GetBytes(expectedKey.Length);
-
-        return CryptographicOperations.FixedTimeEquals(actualKey, expectedKey);
+        var browser = userAgent.Contains("Edg/", StringComparison.OrdinalIgnoreCase) ? "Edge"
+            : userAgent.Contains("Chrome/", StringComparison.OrdinalIgnoreCase) ? "Chrome"
+            : userAgent.Contains("Firefox/", StringComparison.OrdinalIgnoreCase) ? "Firefox"
+            : userAgent.Contains("Safari/", StringComparison.OrdinalIgnoreCase) ? "Safari"
+            : "Browser";
+        var os = userAgent.Contains("Windows", StringComparison.OrdinalIgnoreCase) ? "Windows"
+            : userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase) ? "Android"
+            : userAgent.Contains("iPhone", StringComparison.OrdinalIgnoreCase) ? "iPhone"
+            : userAgent.Contains("Mac OS", StringComparison.OrdinalIgnoreCase) ? "macOS"
+            : "Device";
+        return $"{browser} on {os}";
     }
 }

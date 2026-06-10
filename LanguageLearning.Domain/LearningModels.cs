@@ -3,7 +3,10 @@ namespace LanguageLearning.Domain;
 public static class Roles
 {
     public const string Admin = "Admin";
-    public const string Learner = "Learner";
+    public const string Teacher = "Teacher";
+    public const string Student = "Student";
+    public const string Receptionist = "Receptionist";
+    public const string Learner = Student;
 }
 
 public static class LessonTypes
@@ -12,6 +15,17 @@ public static class LessonTypes
     public const string Listening = "Listening";
     public const string Speaking = "Speaking";
     public const string Grammar = "Grammar";
+}
+
+public static class LessonStepTypes
+{
+    public const string Video = "Video";
+    public const string Flashcards = "Flashcards";
+    public const string Grammar = "Grammar";
+    public const string Quiz = "Quiz";
+    public const string Exercise = "Exercise";
+    public const string SentencePractice = "SentencePractice";
+    public const string Result = "Result";
 }
 
 public static class ProgressStatuses
@@ -29,9 +43,42 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public string Role { get; set; } = Roles.Learner;
+    public string? PhoneNumber { get; set; }
+    public string? CurrentSessionToken { get; set; }
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<UserCourse> UserCourses { get; set; } = [];
     public ICollection<UserLessonProgress> LessonProgress { get; set; } = [];
+    public ICollection<UserSession> Sessions { get; set; } = [];
+    public ICollection<LoginHistory> LoginHistory { get; set; } = [];
+}
+
+public class UserSession
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User? User { get; set; }
+    public string SessionToken { get; set; } = string.Empty;
+    public string DeviceName { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime LoginAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LogoutAt { get; set; }
+}
+
+public class LoginHistory
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User? User { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public DateTime LoginAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LogoutAt { get; set; }
+    public string Status { get; set; } = "Active";
 }
 
 public class Language
@@ -79,6 +126,21 @@ public class Lesson
     public bool IsLocked { get; set; }
     public ICollection<Vocabulary> Vocabulary { get; set; } = [];
     public ICollection<Question> Questions { get; set; } = [];
+    public ICollection<LessonStep> Steps { get; set; } = [];
+}
+
+public class LessonStep
+{
+    public int Id { get; set; }
+    public int LessonId { get; set; }
+    public Lesson? Lesson { get; set; }
+    public string StepType { get; set; } = LessonStepTypes.Video;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public bool IsRequired { get; set; } = true;
+    public int MinScoreToPass { get; set; }
+    public string? ContentUrl { get; set; }
 }
 
 public class Vocabulary
@@ -140,6 +202,47 @@ public class UserLessonProgress
     public int Score { get; set; }
     public int XP { get; set; }
     public DateTime? CompletedAt { get; set; }
+}
+
+public class StudentStepProgress
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User? User { get; set; }
+    public int LessonStepId { get; set; }
+    public LessonStep? LessonStep { get; set; }
+    public string Status { get; set; } = ProgressStatuses.NotStarted;
+    public int Score { get; set; }
+    public int ProgressPercent { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public class SentencePractice
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User? User { get; set; }
+    public int LessonStepId { get; set; }
+    public LessonStep? LessonStep { get; set; }
+    public string GrammarStructure { get; set; } = string.Empty;
+    public string StudentSentence { get; set; } = string.Empty;
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+    public AIScoringResult? ScoringResult { get; set; }
+}
+
+public class AIScoringResult
+{
+    public int Id { get; set; }
+    public int SentencePracticeId { get; set; }
+    public SentencePractice? SentencePractice { get; set; }
+    public int GrammarScore { get; set; }
+    public int VocabularyScore { get; set; }
+    public int NaturalnessScore { get; set; }
+    public int OverallScore { get; set; }
+    public string Feedback { get; set; } = string.Empty;
+    public string SuggestedSentence { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class UserAnswer
@@ -210,3 +313,22 @@ public record DashboardSummary(int XP, int CurrentStreak, int LessonsCompleted, 
 public record QuizSubmission(int LessonId, IReadOnlyDictionary<int, string> Answers);
 
 public record QuizResult(int Score, int XP, bool Passed, int CorrectAnswers, int TotalQuestions, int? NextLessonId);
+
+public record AuthSession(User User, string SessionToken);
+
+public record DeviceInfo(string DeviceName, string? IpAddress, string? UserAgent);
+
+public record SentenceScoringRequest(
+    int UserId,
+    int LessonStepId,
+    string Sentence,
+    string GrammarStructure,
+    IReadOnlyList<string> Vocabulary);
+
+public record AIScoringResponse(
+    int GrammarScore,
+    int VocabularyScore,
+    int NaturalnessScore,
+    int OverallScore,
+    string Feedback,
+    string SuggestedSentence);
