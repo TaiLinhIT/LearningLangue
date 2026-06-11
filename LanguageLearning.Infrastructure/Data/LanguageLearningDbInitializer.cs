@@ -28,10 +28,12 @@ public static class LanguageLearningDbInitializer
         var student3 = await EnsureUserAsync(db, hasher, "Hana Le", "hana@linguaflow.local", Roles.Student, null, "Thi chung chi", "Student@123");
         var student4 = await EnsureUserAsync(db, hasher, "An Pham", "an@linguaflow.local", Roles.Student, null, "Cong viec", "Student@123");
         var student5 = await EnsureUserAsync(db, hasher, "Bao Hoang", "bao@linguaflow.local", Roles.Student, null, "Du hoc", "Student@123");
-        await EnsureUserAsync(db, hasher, "Teacher Demo", "teacher@linguaflow.local", Roles.Teacher, null, "Giang day khoa hoc", "Teacher@123");
+        var teacher = await EnsureUserAsync(db, hasher, "Teacher Demo", "teacher@linguaflow.local", Roles.Teacher, null, "Giang day khoa hoc", "Teacher@123");
         await EnsureUserAsync(db, hasher, "Receptionist Demo", "reception@linguaflow.local", Roles.Receptionist, null, "Cham soc hoc vien", "Reception@123");
 
-        await EnsureStudentSeedDataAsync(db, [learner.Id, student2.Id, student3.Id, student4.Id, student5.Id]);
+        var studentIds = new[] { learner.Id, student2.Id, student3.Id, student4.Id, student5.Id };
+        await EnsureStudentSeedDataAsync(db, studentIds);
+        await EnsurePlatformSeedDataAsync(db, teacher.Id, studentIds);
         await transaction.CommitAsync();
     }
 
@@ -200,6 +202,204 @@ public static class LanguageLearningDbInitializer
         if (!await db.Subscriptions.AnyAsync(x => x.UserId == primaryStudentId && x.PlanName == "Plus"))
         {
             db.Subscriptions.Add(new Subscription { UserId = primaryStudentId, PlanName = "Plus", Status = "Active", StartedAt = DateTime.UtcNow.AddDays(-14), ExpiredAt = DateTime.UtcNow.AddMonths(1) });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task EnsurePlatformSeedDataAsync(
+        LanguageLearningDbContext db,
+        int teacherId,
+        IReadOnlyList<int> studentIds)
+    {
+        var learningClass = await db.Classes.FirstOrDefaultAsync(x => x.Name == "A1 Morning");
+        if (learningClass is null)
+        {
+            learningClass = new LearningClass
+            {
+                Name = "A1 Morning",
+                Level = "A1",
+                TeacherId = teacherId,
+                StartDate = DateTime.UtcNow.Date.AddDays(-14),
+                EndDate = DateTime.UtcNow.Date.AddMonths(3)
+            };
+            db.Classes.Add(learningClass);
+            await db.SaveChangesAsync();
+        }
+
+        foreach (var studentId in studentIds)
+        {
+            if (!await db.ClassStudents.AnyAsync(
+                x => x.ClassId == learningClass.Id && x.StudentId == studentId))
+            {
+                db.ClassStudents.Add(new ClassStudent
+                {
+                    ClassId = learningClass.Id,
+                    StudentId = studentId,
+                    JoinedAt = DateTime.UtcNow.AddDays(-14)
+                });
+            }
+
+            if (!await db.CourseEnrollments.AnyAsync(
+                x => x.CourseId == 1 && x.StudentId == studentId))
+            {
+                db.CourseEnrollments.Add(new CourseEnrollment
+                {
+                    CourseId = 1,
+                    StudentId = studentId,
+                    ClassId = learningClass.Id,
+                    Status = "Active",
+                    EnrolledAt = DateTime.UtcNow.AddDays(-14)
+                });
+            }
+        }
+
+        var vocabulary = await db.Vocabulary.Where(x => x.LessonId == 1).OrderBy(x => x.Id).ToListAsync();
+        foreach (var item in vocabulary)
+        {
+            item.Topic = string.IsNullOrWhiteSpace(item.Topic) ? "Greetings" : item.Topic;
+            item.Level = string.IsNullOrWhiteSpace(item.Level) ? "A1" : item.Level;
+            if (!await db.Flashcards.AnyAsync(x => x.VocabularyId == item.Id))
+            {
+                db.Flashcards.Add(new Flashcard
+                {
+                    VocabularyId = item.Id,
+                    FrontText = item.Word,
+                    BackText = item.Meaning,
+                    ImageUrl = item.ImageUrl,
+                    AudioUrl = item.AudioUrl,
+                    SortOrder = item.Id
+                });
+            }
+        }
+
+        if (!await db.GrammarStructures.AnyAsync(x => x.LessonId == 1))
+        {
+            db.GrammarStructures.AddRange(
+                new GrammarStructure
+                {
+                    LessonId = 1,
+                    Title = "Introducing your name",
+                    StructurePattern = "My name is + name",
+                    Explanation = "Use this structure to introduce yourself.",
+                    ExampleSentence = "My name is Linh.",
+                    VietnameseMeaning = "Ten toi la ...",
+                    SortOrder = 1
+                },
+                new GrammarStructure
+                {
+                    LessonId = 1,
+                    Title = "Asking a name",
+                    StructurePattern = "What is your name?",
+                    Explanation = "Use this question when meeting someone for the first time.",
+                    ExampleSentence = "What is your name?",
+                    VietnameseMeaning = "Ban ten la gi?",
+                    SortOrder = 2
+                });
+        }
+
+        var videoStepId = await db.LessonSteps
+            .Where(x => x.LessonId == 1 && x.StepType == LessonStepTypes.Video)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
+        if (videoStepId > 0 && !await db.LessonVideos.AnyAsync(x => x.LessonStepId == videoStepId))
+        {
+            db.LessonVideos.Add(new LessonVideo
+            {
+                LessonStepId = videoStepId,
+                Title = "Greetings in context",
+                VideoUrl = "https://example.com/videos/greetings-a1.mp4",
+                SubtitleUrl = "https://example.com/subtitles/greetings-a1.vtt",
+                DurationSeconds = 240,
+                RequiredWatchPercent = 80,
+                TranscriptText = "Hello. My name is Linh. Nice to meet you."
+            });
+        }
+
+        if (!await db.ClassComments.AnyAsync(x => x.ClassId == learningClass.Id))
+        {
+            db.ClassComments.Add(new ClassComment
+            {
+                ClassId = learningClass.Id,
+                UserId = teacherId,
+                Content = "Hay dung khu vuc nay de hoi bai. Giao vien se phan hoi trong ngay.",
+                IsPinned = true
+            });
+        }
+
+        if (!await db.Rewards.AnyAsync())
+        {
+            db.Rewards.AddRange(
+                new Reward
+                {
+                    Title = "Top 3 A1 Morning",
+                    Description = "Danh cho ba hoc vien co tong diem cao nhat lop.",
+                    RewardType = "Ranking",
+                    RequiredRank = 3,
+                    ClassId = learningClass.Id
+                },
+                new Reward
+                {
+                    Title = "100 Point Club",
+                    Description = "Dat it nhat 100 diem xep hang.",
+                    RewardType = "Point",
+                    RequiredPoint = 100,
+                    CourseId = 1
+                });
+        }
+
+        if (!await db.IPASounds.AnyAsync())
+        {
+            db.IPASounds.AddRange(
+                new IPASound { Symbol = "/i:/", SoundType = "Vowel", ExampleWord = "see", VietnameseGuide = "Keo dai am i, luoi nang cao.", ComparisonNote = "So sanh voi /i/ trong sit.", SortOrder = 1 },
+                new IPASound { Symbol = "/i/", SoundType = "Vowel", ExampleWord = "sit", VietnameseGuide = "Am i ngan, mieng tha long.", ComparisonNote = "So sanh voi /i:/ trong see.", SortOrder = 2 },
+                new IPASound { Symbol = "/ae/", SoundType = "Vowel", ExampleWord = "cat", VietnameseGuide = "Mo mieng rong, am nam giua a va e.", SortOrder = 3 },
+                new IPASound { Symbol = "/u:/", SoundType = "Vowel", ExampleWord = "food", VietnameseGuide = "Tron moi va keo dai am u.", SortOrder = 4 },
+                new IPASound { Symbol = "/th/", SoundType = "Consonant", ExampleWord = "think", VietnameseGuide = "Dat dau luoi giua hai ham rang va day hoi nhe.", SortOrder = 5 },
+                new IPASound { Symbol = "/dh/", SoundType = "Consonant", ExampleWord = "this", VietnameseGuide = "Giong /th/ nhung co rung day thanh.", SortOrder = 6 });
+        }
+
+        var ipaLesson = await db.IPALessons.FirstOrDefaultAsync(x => x.Title == "English vowel basics");
+        if (ipaLesson is null)
+        {
+            ipaLesson = new IPALesson
+            {
+                Title = "English vowel basics",
+                Description = "Phan biet cac cap nguyen am co ban.",
+                SoundType = "Vowel",
+                SortOrder = 1,
+                Exercises =
+                [
+                    new IPAExercise
+                    {
+                        QuestionText = "Which sound appears in the word see?",
+                        CorrectAnswer = "/i:/",
+                        Explanation = "See uses the long vowel /i:/."
+                    },
+                    new IPAExercise
+                    {
+                        QuestionText = "Which sound appears in the word sit?",
+                        CorrectAnswer = "/i/",
+                        Explanation = "Sit uses the short vowel /i/."
+                    }
+                ]
+            };
+            db.IPALessons.Add(ipaLesson);
+        }
+
+        foreach (var studentId in studentIds)
+        {
+            if (!await db.Notifications.AnyAsync(
+                x => x.UserId == studentId && x.Type == "Welcome"))
+            {
+                db.Notifications.Add(new Notification
+                {
+                    UserId = studentId,
+                    Title = "Chao mung den lop A1 Morning",
+                    Message = "Ban da duoc gan vao khoa English Starter Path.",
+                    Type = "Welcome"
+                });
+            }
         }
 
         await db.SaveChangesAsync();

@@ -10,10 +10,15 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
     public DbSet<LoginHistory> LoginHistory => Set<LoginHistory>();
     public DbSet<Language> Languages => Set<Language>();
     public DbSet<Course> Courses => Set<Course>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonStep> LessonSteps => Set<LessonStep>();
+    public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
     public DbSet<Vocabulary> Vocabulary => Set<Vocabulary>();
+    public DbSet<Flashcard> Flashcards => Set<Flashcard>();
+    public DbSet<GrammarStructure> GrammarStructures => Set<GrammarStructure>();
+    public DbSet<StudentVocabulary> StudentVocabulary => Set<StudentVocabulary>();
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<QuestionOption> QuestionOptions => Set<QuestionOption>();
     public DbSet<UserCourse> UserCourses => Set<UserCourse>();
@@ -27,6 +32,18 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
     public DbSet<UserAchievement> UserAchievements => Set<UserAchievement>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<LearningClass> Classes => Set<LearningClass>();
+    public DbSet<ClassStudent> ClassStudents => Set<ClassStudent>();
+    public DbSet<ClassComment> ClassComments => Set<ClassComment>();
+    public DbSet<ClassCommentReply> ClassCommentReplies => Set<ClassCommentReply>();
+    public DbSet<RankingPoint> RankingPoints => Set<RankingPoint>();
+    public DbSet<Reward> Rewards => Set<Reward>();
+    public DbSet<StudentReward> StudentRewards => Set<StudentReward>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<IPASound> IPASounds => Set<IPASound>();
+    public DbSet<IPALesson> IPALessons => Set<IPALesson>();
+    public DbSet<IPAExercise> IPAExercises => Set<IPAExercise>();
+    public DbSet<Report> Reports => Set<Report>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +66,45 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
         modelBuilder.Entity<Language>().HasIndex(x => x.Code).IsUnique();
         modelBuilder.Entity<Course>().Property(x => x.Title).HasMaxLength(180);
         modelBuilder.Entity<Payment>().Property(x => x.Amount).HasColumnType("decimal(18,2)");
+        modelBuilder.Entity<CourseEnrollment>()
+            .HasIndex(x => new { x.CourseId, x.StudentId })
+            .IsUnique();
+        modelBuilder.Entity<ClassStudent>()
+            .HasIndex(x => new { x.ClassId, x.StudentId })
+            .IsUnique();
+        modelBuilder.Entity<StudentVocabulary>()
+            .HasIndex(x => new { x.StudentId, x.VocabularyId })
+            .IsUnique();
+        modelBuilder.Entity<LearningClass>()
+            .HasOne(x => x.Teacher)
+            .WithMany()
+            .HasForeignKey(x => x.TeacherId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ClassComment>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ClassCommentReply>()
+            .HasOne(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<RankingPoint>()
+            .HasOne(x => x.Student)
+            .WithMany()
+            .HasForeignKey(x => x.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Reward>()
+            .HasOne(x => x.Class)
+            .WithMany()
+            .HasForeignKey(x => x.ClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Report>()
+            .HasOne(x => x.Reporter)
+            .WithMany()
+            .HasForeignKey(x => x.ReporterId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Language>().HasData(
             new Language { Id = 1, Name = "English", Code = "en", FlagIcon = "US" },
@@ -56,9 +112,9 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
             new Language { Id = 3, Name = "Korean", Code = "ko", FlagIcon = "KR" });
 
         modelBuilder.Entity<Course>().HasData(
-            new Course { Id = 1, LanguageId = 1, Title = "English Starter Path", Description = "Build daily conversation, core vocabulary, and confident pronunciation.", Level = "A1", ThumbnailUrl = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80", IsPublished = true },
-            new Course { Id = 2, LanguageId = 1, Title = "Workplace English", Description = "Meetings, emails, presentations, and polite office conversation.", Level = "A2", ThumbnailUrl = "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80", IsPublished = true },
-            new Course { Id = 3, LanguageId = 2, Title = "Japanese First Steps", Description = "Hiragana, greetings, and survival phrases for beginners.", Level = "A1", ThumbnailUrl = "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=80", IsPublished = true });
+            new Course { Id = 1, LanguageId = 1, Title = "English Starter Path", Description = "Build daily conversation, core vocabulary, and confident pronunciation.", Level = "A1", ThumbnailUrl = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80", IsPublished = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Course { Id = 2, LanguageId = 1, Title = "Workplace English", Description = "Meetings, emails, presentations, and polite office conversation.", Level = "A2", ThumbnailUrl = "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80", IsPublished = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Course { Id = 3, LanguageId = 2, Title = "Japanese First Steps", Description = "Hiragana, greetings, and survival phrases for beginners.", Level = "A1", ThumbnailUrl = "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=80", IsPublished = true, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) });
 
         modelBuilder.Entity<Unit>().HasData(
             new Unit { Id = 1, CourseId = 1, Title = "Meet People", SortOrder = 1 },
@@ -83,11 +139,11 @@ public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContex
             new LessonStep { Id = 7, LessonId = 1, StepType = LessonStepTypes.Result, Title = "Ket qua", Description = "Tong ket diem, XP va tien do.", SortOrder = 7, MinScoreToPass = 0 });
 
         modelBuilder.Entity<Vocabulary>().HasData(
-            new Vocabulary { Id = 1, LessonId = 1, Word = "hello", Meaning = "xin chao", Pronunciation = "heh-low", ExampleSentence = "Hello, my name is Linh." },
-            new Vocabulary { Id = 2, LessonId = 1, Word = "name", Meaning = "ten", Pronunciation = "naym", ExampleSentence = "What is your name?" },
-            new Vocabulary { Id = 3, LessonId = 2, Word = "from", Meaning = "den tu", Pronunciation = "frum", ExampleSentence = "I am from Vietnam." },
-            new Vocabulary { Id = 4, LessonId = 4, Word = "meeting", Meaning = "cuoc hop", Pronunciation = "mee-ting", ExampleSentence = "The meeting starts at nine." },
-            new Vocabulary { Id = 5, LessonId = 5, Word = "a", Meaning = "am a trong hiragana", Pronunciation = "a", ExampleSentence = "A sounds like ah." });
+            new Vocabulary { Id = 1, LessonId = 1, Word = "hello", Meaning = "xin chao", Pronunciation = "heh-low", ExampleSentence = "Hello, my name is Linh.", Topic = "Greetings", Level = "A1" },
+            new Vocabulary { Id = 2, LessonId = 1, Word = "name", Meaning = "ten", Pronunciation = "naym", ExampleSentence = "What is your name?", Topic = "Greetings", Level = "A1" },
+            new Vocabulary { Id = 3, LessonId = 2, Word = "from", Meaning = "den tu", Pronunciation = "frum", ExampleSentence = "I am from Vietnam.", Topic = "Origin", Level = "A1" },
+            new Vocabulary { Id = 4, LessonId = 4, Word = "meeting", Meaning = "cuoc hop", Pronunciation = "mee-ting", ExampleSentence = "The meeting starts at nine.", Topic = "Work", Level = "A2" },
+            new Vocabulary { Id = 5, LessonId = 5, Word = "a", Meaning = "am a trong hiragana", Pronunciation = "a", ExampleSentence = "A sounds like ah.", Topic = "Kana", Level = "A1" });
 
         modelBuilder.Entity<Question>().HasData(
             new Question { Id = 1, LessonId = 1, QuestionText = "Which sentence introduces your name?", QuestionType = "MultipleChoice", CorrectAnswer = "My name is An.", Explanation = "Use 'My name is...' for a natural self-introduction." },

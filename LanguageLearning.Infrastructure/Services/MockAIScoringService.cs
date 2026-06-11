@@ -1,6 +1,7 @@
 using LanguageLearning.Application.Abstractions;
 using LanguageLearning.Domain;
 using LanguageLearning.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
@@ -75,4 +76,15 @@ public sealed class SentencePracticeService(
         await db.SaveChangesAsync(cancellationToken);
         return result;
     }
+
+    public Task<AIScoringResult?> GetResultAsync(
+        int sentencePracticeId,
+        int userId,
+        CancellationToken cancellationToken = default) =>
+        db.AIScoringResults
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.SentencePracticeId == sentencePracticeId
+                    && x.SentencePractice!.UserId == userId,
+                cancellationToken);
 }

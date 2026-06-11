@@ -101,7 +101,9 @@ public class Course
     public string Level { get; set; } = "A1";
     public string? ThumbnailUrl { get; set; }
     public bool IsPublished { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<Unit> Units { get; set; } = [];
+    public ICollection<CourseEnrollment> Enrollments { get; set; } = [];
 }
 
 public class Unit
@@ -142,6 +144,7 @@ public class LessonStep
     public bool IsRequired { get; set; } = true;
     public int MinScoreToPass { get; set; }
     public string? ContentUrl { get; set; }
+    public ICollection<LessonVideo> Videos { get; set; } = [];
 }
 
 public class Vocabulary
@@ -155,6 +158,9 @@ public class Vocabulary
     public string? ExampleSentence { get; set; }
     public string? AudioUrl { get; set; }
     public string? ImageUrl { get; set; }
+    public string Topic { get; set; } = string.Empty;
+    public string Level { get; set; } = "A1";
+    public ICollection<Flashcard> Flashcards { get; set; } = [];
 }
 
 public class Question

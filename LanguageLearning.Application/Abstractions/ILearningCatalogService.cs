@@ -56,6 +56,10 @@ public interface ISentencePracticeService
     Task<AIScoringResult> SubmitAsync(
         SentenceScoringRequest request,
         CancellationToken cancellationToken = default);
+    Task<AIScoringResult?> GetResultAsync(
+        int sentencePracticeId,
+        int userId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILearningExperienceService

@@ -4,6 +4,7 @@ using LanguageLearning.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LanguageLearning.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LanguageLearningDbContext))]
-    partial class LanguageLearningDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611031319_AddLearningPlatformModules")]
+    partial class AddLearningPlatformModules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
