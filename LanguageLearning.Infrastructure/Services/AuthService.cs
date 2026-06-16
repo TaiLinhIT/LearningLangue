@@ -7,12 +7,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public class AuthService(LanguageLearningDbContext db) : IAuthService
+public class AuthService(IDbContextFactory<LanguageLearningDbContext> factory) : IAuthService
 {
     private readonly PasswordHasher<User> _passwordHasher = new();
 
     public async Task<User?> ValidateUserAsync(string email, string password, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         var user = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
         if (user is null || !user.IsActive)
@@ -26,6 +27,7 @@ public class AuthService(LanguageLearningDbContext db) : IAuthService
 
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         return await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
     }
@@ -37,6 +39,7 @@ public class AuthService(LanguageLearningDbContext db) : IAuthService
         string learningGoal,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         if (await db.Users.AnyAsync(x => x.Email == normalizedEmail, cancellationToken))
         {
@@ -74,8 +77,16 @@ public class AuthService(LanguageLearningDbContext db) : IAuthService
         DeviceInfo device,
         CancellationToken cancellationToken = default)
     {
-        var user = await ValidateUserAsync(email, password, cancellationToken);
-        if (user is null)
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Email == normalizedEmail, cancellationToken);
+        if (user is null || !user.IsActive)
+        {
+            return null;
+        }
+
+        var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        if (result == PasswordVerificationResult.Failed)
         {
             return null;
         }
@@ -130,6 +141,7 @@ public class AuthService(LanguageLearningDbContext db) : IAuthService
         string sessionToken,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
         if (user is not null && user.CurrentSessionToken == sessionToken)
@@ -160,28 +172,35 @@ public class AuthService(LanguageLearningDbContext db) : IAuthService
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<bool> IsSessionActiveAsync(
+    public async Task<bool> IsSessionActiveAsync(
         int userId,
         string sessionToken,
-        CancellationToken cancellationToken = default) =>
-        db.Users.AnyAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Users.AnyAsync(
             x => x.Id == userId
                 && x.IsActive
                 && x.CurrentSessionToken == sessionToken,
             cancellationToken);
-
-    public Task<bool> UserExistsAsync(string email, CancellationToken cancellationToken = default)
-    {
-        var normalizedEmail = NormalizeEmail(email);
-        return db.Users.AnyAsync(x => x.Email == normalizedEmail, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default) =>
-        await db.UserSessions
+    public async Task<bool> UserExistsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        return await db.Users.AnyAsync(x => x.Email == normalizedEmail, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.UserSessions
             .Include(x => x.User)
             .AsNoTracking()
             .OrderByDescending(x => x.LoginAt)
             .ToListAsync(cancellationToken);
+    }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

@@ -1,0 +1,104 @@
+.my-courses-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem clamp(1rem, 3vw, 2rem);
+}
+
+.my-courses-page-header {
+    margin-bottom: 1.5rem;
+}
+
+.my-courses-page-header h1 {
+    color: #243042;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 .25rem;
+}
+
+.my-courses-page-sub {
+    color: #68768a;
+    font-size: .9rem;
+    margin: 0;
+}
+
+.my-courses-page-loading {
+    color: #68768a;
+    padding: 2rem 0;
+    text-align: center;
+}
+
+.my-courses-page-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.my-courses-page-row {
+    align-items: center;
+    border-bottom: 1px solid #f0f4f8;
+    display: flex;
+    gap: 1rem;
+    padding: .875rem 1rem;
+    transition: background .12s;
+    border-radius: 8px;
+}
+
+.my-courses-page-row:hover {
+    background: #f7fafc;
+}
+
+.my-courses-page-thumb {
+    align-items: center;
+    border-radius: 8px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-weight: 700;
+    height: 56px;
+    justify-content: center;
+    text-decoration: none;
+    width: 86px;
+    font-size: .7rem;
+    text-align: center;
+    line-height: 1.3;
+    padding: 4px;
+}
+
+.my-courses-page-thumb span {
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.my-courses-page-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.my-courses-page-title {
+    color: #243042;
+    font-size: .95rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.my-courses-page-title:hover {
+    text-decoration: underline;
+}
+
+.my-courses-page-time {
+    color: #68768a;
+    font-size: .82rem;
+}
+
+.my-courses-page-start {
+    color: #ef4444;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.my-courses-page-actions {
+    flex-shrink: 0;
+}

@@ -5,12 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public sealed class ContentManagementService(LanguageLearningDbContext db) : IContentManagementService
+public sealed class ContentManagementService(IDbContextFactory<LanguageLearningDbContext> factory) : IContentManagementService
 {
     public async Task<LessonStepDto> CreateLessonStepAsync(
         SaveLessonStepCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var step = Apply(new LessonStep(), command);
         db.LessonSteps.Add(step);
         await db.SaveChangesAsync(cancellationToken);
@@ -22,12 +23,9 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         SaveLessonStepCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var step = await db.LessonSteps.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (step is null)
-        {
-            return null;
-        }
-
+        if (step is null) return null;
         Apply(step, command);
         await db.SaveChangesAsync(cancellationToken);
         return Map(step);
@@ -37,6 +35,7 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         SaveLessonVideoCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var video = new LessonVideo
         {
             LessonStepId = command.LessonStepId,
@@ -56,6 +55,7 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         SaveFlashcardCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var card = new Flashcard
         {
             VocabularyId = command.VocabularyId,
@@ -74,6 +74,7 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         SaveQuestionCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var question = Apply(new Question(), command);
         db.Questions.Add(question);
         await db.SaveChangesAsync(cancellationToken);
@@ -85,14 +86,9 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         SaveQuestionCommand command,
         CancellationToken cancellationToken = default)
     {
-        var question = await db.Questions
-            .Include(x => x.Options)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (question is null)
-        {
-            return false;
-        }
-
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        var question = await db.Questions.Include(x => x.Options).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (question is null) return false;
         db.QuestionOptions.RemoveRange(question.Options);
         Apply(question, command);
         await db.SaveChangesAsync(cancellationToken);
@@ -103,12 +99,9 @@ public sealed class ContentManagementService(LanguageLearningDbContext db) : ICo
         int id,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var question = await db.Questions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (question is null)
-        {
-            return false;
-        }
-
+        if (question is null) return false;
         db.Questions.Remove(question);
         await db.SaveChangesAsync(cancellationToken);
         return true;

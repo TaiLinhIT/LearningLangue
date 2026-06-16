@@ -5,13 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public sealed class LearningJourneyService(LanguageLearningDbContext db) : ILearningJourneyService
+public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbContext> factory) : ILearningJourneyService
 {
     public async Task<RoadmapDto?> GetCourseRoadmapAsync(
         int courseId,
         int userId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var course = await db.Courses
             .Include(x => x.Units.OrderBy(unit => unit.SortOrder))
             .ThenInclude(x => x.Lessons.OrderBy(lesson => lesson.SortOrder))

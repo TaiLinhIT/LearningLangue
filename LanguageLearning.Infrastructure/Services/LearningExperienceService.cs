@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public class LearningExperienceService(LanguageLearningDbContext db) : ILearningExperienceService
+public class LearningExperienceService(IDbContextFactory<LanguageLearningDbContext> factory) : ILearningExperienceService
 {
     private const string DefaultClassName = "A1 Morning";
 
@@ -13,6 +13,7 @@ public class LearningExperienceService(LanguageLearningDbContext db) : ILearning
         int userId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var progress = await db.UserLessonProgress
             .AsNoTracking()
             .Where(x => x.UserId == userId)
@@ -65,6 +66,7 @@ public class LearningExperienceService(LanguageLearningDbContext db) : ILearning
     public async Task<IReadOnlyList<RankingEntry>> GetCenterRankingAsync(
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var students = await db.Users
             .AsNoTracking()
             .Where(x => x.Role == Roles.Student && x.IsActive)
@@ -146,6 +148,7 @@ public class LearningExperienceService(LanguageLearningDbContext db) : ILearning
         int userId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var ranking = await GetCenterRankingAsync(cancellationToken);
         var me = ranking.FirstOrDefault(x => x.StudentId == userId);
         var progress = await db.UserLessonProgress
@@ -201,6 +204,7 @@ public class LearningExperienceService(LanguageLearningDbContext db) : ILearning
         int userId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var ranking = await GetCenterRankingAsync(cancellationToken);
         var students = ranking
             .Select(x => new ClassmateItem(

@@ -12,11 +12,36 @@ public static class LanguageLearningDbInitializer
     private const string InitialMigrationId = "20260608061602_InitialCreate";
     private const string AddUserLearningGoalMigrationId = "20260609000000_AddUserLearningGoal";
     private const string InitialMigrationProductVersion = "8.0.22";
+    private const string DatabaseInitializerLockResource = "LanguageLearning.DatabaseInitializer";
+    private const int DatabaseInitializerLockTimeoutMilliseconds = 120_000;
+    private const int DatabaseInitializerLockCommandTimeoutSeconds = 150;
 
     public static async Task InitializeAsync(IServiceProvider services)
     {
-        await using var scope = services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<LanguageLearningDbContext>();
+        await using var strategyScope = services.CreateAsyncScope();
+        var strategyDb = strategyScope.ServiceProvider.GetRequiredService<LanguageLearningDbContext>();
+        var strategy = strategyDb.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var scope = services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<LanguageLearningDbContext>();
+            await db.Database.OpenConnectionAsync();
+
+            try
+            {
+                await AcquireDatabaseInitializerLockAsync(db);
+                await InitializeDatabaseAsync(db);
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync();
+            }
+        });
+    }
+
+    private static async Task InitializeDatabaseAsync(LanguageLearningDbContext db)
+    {
         await EnsureDatabaseReadyAsync(db);
 
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -35,6 +60,35 @@ public static class LanguageLearningDbInitializer
         await EnsureStudentSeedDataAsync(db, studentIds);
         await EnsurePlatformSeedDataAsync(db, teacher.Id, studentIds);
         await transaction.CommitAsync();
+    }
+
+    private static async Task AcquireDatabaseInitializerLockAsync(LanguageLearningDbContext db)
+    {
+        var originalCommandTimeout = db.Database.GetCommandTimeout();
+        db.Database.SetCommandTimeout(DatabaseInitializerLockCommandTimeoutSeconds);
+
+        try
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                DECLARE @result int;
+
+                EXEC @result = sys.sp_getapplock
+                    @Resource = {DatabaseInitializerLockResource},
+                    @LockMode = N'Exclusive',
+                    @LockOwner = N'Session',
+                    @LockTimeout = {DatabaseInitializerLockTimeoutMilliseconds};
+
+                IF @result < 0
+                BEGIN
+                    THROW 51000, 'Timed out waiting for another process to finish database initialization.', 1;
+                END;
+                """);
+        }
+        finally
+        {
+            db.Database.SetCommandTimeout(originalCommandTimeout);
+        }
     }
 
     private static async Task<User> EnsureUserAsync(

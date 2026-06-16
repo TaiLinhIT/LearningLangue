@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject ILearningCatalogService Catalog
+@inject AuthenticationStateProvider AuthState
 
 <MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
@@ -21,22 +23,73 @@
             <AuthorizeView>
                 <Authorized Context="authContext">
                     <div class="site-auth-actions signed-in-actions">
-                        <MudButton Href="account"
-                                   Variant="Variant.Text"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.AccountCircle"
-                                   Class="auth-button login-button">
-                            @GetDisplayName(authContext.User)
-                        </MudButton>
-                        <form method="post" action="/auth/sign-out" class="sign-out-form">
-                            <MudButton ButtonType="ButtonType.Submit"
-                                       Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Logout"
-                                       Class="auth-button register-button">
-                                Dang xuat
-                            </MudButton>
-                        </form>
+                        <!-- My Courses dropdown -->
+                        <div class="my-courses-wrapper">
+                            <button class="my-courses-btn" @onclick="ToggleCoursesPopup">
+                                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
+                                <span>Khoa hoc cua toi</span>
+                            </button>
+                            @if (_showCoursesPopup)
+                            {
+                                <div class="courses-popup" @onclick:stopPropagation="true">
+                                    <div class="courses-popup-header">
+                                        <span class="courses-popup-title">Khoa hoc cua toi</span>
+                                        <a href="my-courses" class="courses-popup-viewall" @onclick="CloseCoursesPopup">Xem tat ca</a>
+                                    </div>
+                                    @if (_myCourses is null)
+                                    {
+                                        <div class="courses-popup-loading">Dang tai...</div>
+                                    }
+                                    else if (_myCourses.Count == 0)
+                                    {
+                                        <div class="courses-popup-empty">Ban chua dang ky khoa hoc nao.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="courses-popup-list">
+                                            @foreach (var item in _myCourses)
+                                            {
+                                                <a class="courses-popup-item" href="/course/@item.Course.Id" @onclick="CloseCoursesPopup">
+                                                    <div class="courses-popup-thumb" style="background: @item.ThumbColor">
+                                                        <span>@item.Course.Language?.Code</span>
+                                                        <small>@item.Course.Level</small>
+                                                    </div>
+                                                    <div class="courses-popup-info">
+                                                        <strong>@item.Course.Title</strong>
+                                                        @if (item.ProgressPercent > 0)
+                                                        {
+                                                            <span class="courses-popup-time">Hoc cach day @item.DaysAgo ngay truoc</span>
+                                                            <div class="courses-popup-bar">
+                                                                <div class="courses-popup-bar-fill" style="width: @(item.ProgressPercent)%"></div>
+                                                            </div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="courses-popup-time">Ban chua hoc khoa nay</span>
+                                                            <span class="courses-popup-start">Bat dau hoc</span>
+                                                        }
+                                                    </div>
+                                                </a>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="courses-popup-backdrop" @onclick="CloseCoursesPopup"></div>
+                            }
+                        </div>
+
+                        <!-- Bell icon -->
+                        <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                       Color="Color.Default"
+                                       Size="Size.Medium"
+                                       Class="header-icon-btn" />
+
+                        <!-- Avatar -->
+                        <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                                       Href="account"
+                                       Color="Color.Default"
+                                       Size="Size.Medium"
+                                       Class="header-icon-btn header-avatar-btn" />
                     </div>
                 </Authorized>
                 <NotAuthorized>
@@ -76,9 +129,60 @@
 
 @code {
     private string? _searchText;
+    private bool _showCoursesPopup;
+    private List<MyCourseItem>? _myCourses;
+
+    private static readonly string[] ThumbColors = ["#8b5cf6", "#f59e0b", "#3b82f6", "#ef4444", "#06b6d4", "#10b981"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+        {
+            await LoadMyCoursesAsync(auth);
+        }
+    }
+
+    private async Task LoadMyCoursesAsync(AuthenticationState auth)
+    {
+        var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out var userId)) return;
+
+        var courses = await Catalog.GetCoursesAsync();
+        var progress = await Catalog.GetProgressAsync(userId);
+
+        _myCourses = courses.Select((c, i) =>
+        {
+            var lessonIds = c.Units.SelectMany(u => u.Lessons).Select(l => l.Id).ToHashSet();
+            var completed = progress.Count(p => lessonIds.Contains(p.LessonId) && p.Status == "Completed");
+            var total = lessonIds.Count;
+            var pct = total > 0 ? (int)(completed * 100.0 / total) : 0;
+            var lastDone = progress.Where(p => lessonIds.Contains(p.LessonId) && p.CompletedAt.HasValue)
+                                   .OrderByDescending(p => p.CompletedAt)
+                                   .FirstOrDefault();
+            var daysAgo = lastDone?.CompletedAt.HasValue == true
+                ? (int)(DateTime.UtcNow - lastDone.CompletedAt!.Value).TotalDays
+                : 0;
+            return new MyCourseItem(c, pct, daysAgo, ThumbColors[i % ThumbColors.Length]);
+        }).ToList();
+    }
+
+    private async Task ToggleCoursesPopup()
+    {
+        _showCoursesPopup = !_showCoursesPopup;
+        if (_showCoursesPopup && _myCourses is null)
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            await LoadMyCoursesAsync(auth);
+        }
+    }
+
+    private void CloseCoursesPopup() => _showCoursesPopup = false;
 
     private static string GetDisplayName(ClaimsPrincipal user) =>
         user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.Email) ?? "Tai khoan";
+
+    private record MyCourseItem(Course Course, int ProgressPercent, int DaysAgo, string ThumbColor);
 
     private readonly MudTheme _theme = new()
     {

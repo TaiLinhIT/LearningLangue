@@ -5,10 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCatalogService
+public class LearningCatalogService(IDbContextFactory<LanguageLearningDbContext> factory) : ILearningCatalogService
 {
     public async Task<DashboardSummary> GetDashboardAsync(int userId, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var progress = await db.UserLessonProgress.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
         var streak = await db.Streaks.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
         var xp = progress.Sum(x => x.XP);
@@ -19,11 +20,15 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
         return new DashboardSummary(xp, streak?.CurrentStreak ?? 0, completed, average, rank);
     }
 
-    public async Task<IReadOnlyList<Language>> GetLanguagesAsync(CancellationToken cancellationToken = default) =>
-        await db.Languages.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyList<Language>> GetLanguagesAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Languages.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<Course>> GetCoursesAsync(bool includeDrafts = false, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var query = db.Courses.Include(x => x.Language).Include(x => x.Units).ThenInclude(x => x.Lessons).AsNoTracking();
         if (!includeDrafts)
         {
@@ -33,16 +38,21 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
         return await query.OrderBy(x => x.Language!.Name).ThenBy(x => x.Level).ToListAsync(cancellationToken);
     }
 
-    public async Task<Course?> GetCourseAsync(int id, CancellationToken cancellationToken = default) =>
-        await db.Courses
+    public async Task<Course?> GetCourseAsync(int id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Courses
             .Include(x => x.Language)
             .Include(x => x.Units.OrderBy(u => u.SortOrder))
             .ThenInclude(x => x.Lessons.OrderBy(l => l.SortOrder))
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
 
-    public async Task<Lesson?> GetLessonAsync(int id, CancellationToken cancellationToken = default) =>
-        await db.Lessons
+    public async Task<Lesson?> GetLessonAsync(int id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Lessons
             .Include(x => x.Unit)
             .ThenInclude(x => x!.Course)
             .Include(x => x.Vocabulary)
@@ -51,9 +61,12 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
             .ThenInclude(x => x.Options)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
 
-    public async Task<IReadOnlyList<UserLessonProgress>> GetProgressAsync(int userId, CancellationToken cancellationToken = default) =>
-        await db.UserLessonProgress
+    public async Task<IReadOnlyList<UserLessonProgress>> GetProgressAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.UserLessonProgress
             .Include(x => x.Lesson)
             .ThenInclude(x => x!.Unit)
             .ThenInclude(x => x!.Course)
@@ -61,18 +74,23 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
             .Where(x => x.UserId == userId)
             .OrderByDescending(x => x.CompletedAt)
             .ToListAsync(cancellationToken);
+    }
 
-    public async Task<IReadOnlyList<UserAnswer>> GetMistakesAsync(int userId, CancellationToken cancellationToken = default) =>
-        await db.UserAnswers
+    public async Task<IReadOnlyList<UserAnswer>> GetMistakesAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.UserAnswers
             .Include(x => x.Question)
             .ThenInclude(x => x!.Lesson)
             .AsNoTracking()
             .Where(x => x.UserId == userId && !x.IsCorrect)
             .OrderByDescending(x => x.AnsweredAt)
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<QuizResult> SubmitQuizAsync(int userId, QuizSubmission submission, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var lesson = await db.Lessons
             .Include(x => x.Unit)
             .Include(x => x.Questions)
@@ -120,7 +138,7 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
         progress.XP += earnedXp;
         progress.CompletedAt = passed ? DateTime.UtcNow : progress.CompletedAt;
 
-        await UpdateStreakAsync(userId, cancellationToken);
+        await UpdateStreakAsync(db, userId, cancellationToken);
 
         int? nextLessonId = null;
         if (passed)
@@ -141,7 +159,7 @@ public class LearningCatalogService(LanguageLearningDbContext db) : ILearningCat
         return new QuizResult(score, earnedXp, passed, correct, total, nextLessonId);
     }
 
-    private async Task UpdateStreakAsync(int userId, CancellationToken cancellationToken)
+    private static async Task UpdateStreakAsync(LanguageLearningDbContext db, int userId, CancellationToken cancellationToken)
     {
         var today = DateTime.UtcNow.Date;
         var streak = await db.Streaks.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);

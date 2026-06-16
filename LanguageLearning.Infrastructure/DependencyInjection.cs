@@ -21,7 +21,21 @@ public static class DependencyInjection
             ?? "Server=(localdb)\\MSSQLLocalDB;Database=LanguageLearning;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;Encrypt=False";
 
         services.AddDbContext<LanguageLearningDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(
+                connectionString,
+                sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)));
+
+        services.AddDbContextFactory<LanguageLearningDbContext>(options =>
+            options.UseSqlServer(
+                connectionString,
+                sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)),
+            ServiceLifetime.Scoped);
 
         services.AddScoped<ILearningCatalogService, LearningCatalogService>();
         services.AddScoped<IAdminLearningService, AdminLearningService>();

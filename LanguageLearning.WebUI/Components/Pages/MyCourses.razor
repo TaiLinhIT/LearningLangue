@@ -1,0 +1,86 @@
+@page "/my-courses"
+@attribute [Authorize(Roles = "Student,Admin")]
+@inject ILearningCatalogService Catalog
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Khoa hoc cua toi</PageTitle>
+
+<section class="my-courses-page">
+    <div class="my-courses-page-header">
+        <h1>Khoa hoc cua toi</h1>
+        @if (_items is not null)
+        {
+            <p class="my-courses-page-sub">Ban chua hoan thanh khoa hoc nao.</p>
+        }
+    </div>
+
+    @if (_items is null)
+    {
+        <div class="my-courses-page-loading">Dang tai...</div>
+    }
+    else
+    {
+        <div class="my-courses-page-list">
+            @foreach (var item in _items)
+            {
+                <div class="my-courses-page-row">
+                    <a class="my-courses-page-thumb" href="/course/@item.Course.Id"
+                       style="background: @item.ThumbColor">
+                        <span>@item.Course.Language?.Code</span>
+                        <small>@item.Course.Level</small>
+                    </a>
+                    <div class="my-courses-page-info">
+                        <a class="my-courses-page-title" href="/course/@item.Course.Id">@item.Course.Title</a>
+                        @if (item.ProgressPercent > 0)
+                        {
+                            <span class="my-courses-page-time">Hoc cach day @item.DaysAgo ngay truoc</span>
+                        }
+                        else
+                        {
+                            <span class="my-courses-page-time">Ban chua hoc khoa nay</span>
+                            <span class="my-courses-page-start">Bat dau hoc</span>
+                        }
+                    </div>
+                    <div class="my-courses-page-actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreHoriz"
+                                       Size="Size.Small"
+                                       Color="Color.Default" />
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private List<MyCourseItem>? _items;
+
+    private static readonly string[] ThumbColors = ["#8b5cf6", "#f59e0b", "#3b82f6", "#ef4444", "#06b6d4", "#10b981"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out var userId)) return;
+
+        var courses = await Catalog.GetCoursesAsync();
+        var progress = await Catalog.GetProgressAsync(userId);
+
+        _items = courses.Select((c, i) =>
+        {
+            var lessonIds = c.Units.SelectMany(u => u.Lessons).Select(l => l.Id).ToHashSet();
+            var completed = progress.Count(p => lessonIds.Contains(p.LessonId) && p.Status == "Completed");
+            var total = lessonIds.Count;
+            var pct = total > 0 ? (int)(completed * 100.0 / total) : 0;
+            var lastDone = progress.Where(p => lessonIds.Contains(p.LessonId) && p.CompletedAt.HasValue)
+                                   .OrderByDescending(p => p.CompletedAt)
+                                   .FirstOrDefault();
+            var daysAgo = lastDone?.CompletedAt.HasValue == true
+                ? (int)(DateTime.UtcNow - lastDone.CompletedAt!.Value).TotalDays
+                : 0;
+            return new MyCourseItem(c, pct, daysAgo, ThumbColors[i % ThumbColors.Length]);
+        }).ToList();
+    }
+
+    private record MyCourseItem(Course Course, int ProgressPercent, int DaysAgo, string ThumbColor);
+}

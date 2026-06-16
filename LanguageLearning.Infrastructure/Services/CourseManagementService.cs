@@ -5,29 +5,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LanguageLearning.Infrastructure.Services;
 
-public sealed class CourseManagementService(LanguageLearningDbContext db) : ICourseManagementService
+public sealed class CourseManagementService(IDbContextFactory<LanguageLearningDbContext> factory) : ICourseManagementService
 {
-    public async Task<IReadOnlyList<CourseSummaryDto>> GetAsync(
-        bool includeDrafts,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CourseSummaryDto>> GetAsync(bool includeDrafts, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var query = db.Courses.AsNoTracking().AsQueryable();
-        if (!includeDrafts)
-        {
-            query = query.Where(x => x.IsPublished);
-        }
-
+        if (!includeDrafts) query = query.Where(x => x.IsPublished);
         return await Project(query.OrderBy(x => x.Title)).ToListAsync(cancellationToken);
     }
 
-    public Task<CourseSummaryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
-        Project(db.Courses.AsNoTracking().Where(x => x.Id == id))
-            .FirstOrDefaultAsync(cancellationToken);
-
-    public async Task<CourseSummaryDto> CreateAsync(
-        SaveCourseCommand command,
-        CancellationToken cancellationToken = default)
+    public async Task<CourseSummaryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await Project(db.Courses.AsNoTracking().Where(x => x.Id == id)).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<CourseSummaryDto> CreateAsync(SaveCourseCommand command, CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var course = new Course
         {
             LanguageId = command.LanguageId,
@@ -42,17 +38,11 @@ public sealed class CourseManagementService(LanguageLearningDbContext db) : ICou
         return (await GetByIdAsync(course.Id, cancellationToken))!;
     }
 
-    public async Task<CourseSummaryDto?> UpdateAsync(
-        int id,
-        SaveCourseCommand command,
-        CancellationToken cancellationToken = default)
+    public async Task<CourseSummaryDto?> UpdateAsync(int id, SaveCourseCommand command, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var course = await db.Courses.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (course is null)
-        {
-            return null;
-        }
-
+        if (course is null) return null;
         course.LanguageId = command.LanguageId;
         course.Title = command.Title.Trim();
         course.Description = command.Description.Trim();
@@ -65,12 +55,9 @@ public sealed class CourseManagementService(LanguageLearningDbContext db) : ICou
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var course = await db.Courses.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (course is null)
-        {
-            return false;
-        }
-
+        if (course is null) return false;
         db.Courses.Remove(course);
         await db.SaveChangesAsync(cancellationToken);
         return true;
@@ -78,36 +65,26 @@ public sealed class CourseManagementService(LanguageLearningDbContext db) : ICou
 
     public async Task<bool> PublishAsync(int id, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var course = await db.Courses.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        if (course is null)
-        {
-            return false;
-        }
-
+        if (course is null) return false;
         course.IsPublished = true;
         await db.SaveChangesAsync(cancellationToken);
         return true;
     }
 
-    public async Task<int> CreateUnitAsync(
-        SaveUnitCommand command,
-        CancellationToken cancellationToken = default)
+    public async Task<int> CreateUnitAsync(SaveUnitCommand command, CancellationToken cancellationToken = default)
     {
-        var unit = new Unit
-        {
-            CourseId = command.CourseId,
-            Title = command.Title.Trim(),
-            SortOrder = command.SortOrder
-        };
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        var unit = new Unit { CourseId = command.CourseId, Title = command.Title.Trim(), SortOrder = command.SortOrder };
         db.Units.Add(unit);
         await db.SaveChangesAsync(cancellationToken);
         return unit.Id;
     }
 
-    public async Task<int> CreateLessonAsync(
-        SaveLessonCommand command,
-        CancellationToken cancellationToken = default)
+    public async Task<int> CreateLessonAsync(SaveLessonCommand command, CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var lesson = new Lesson
         {
             UnitId = command.UnitId,
