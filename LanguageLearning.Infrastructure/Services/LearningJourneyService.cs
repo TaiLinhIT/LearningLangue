@@ -7,6 +7,7 @@ namespace LanguageLearning.Infrastructure.Services;
 
 public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbContext> factory) : ILearningJourneyService
 {
+    
     public async Task<RoadmapDto?> GetCourseRoadmapAsync(
         int courseId,
         int userId,
@@ -106,6 +107,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         int userId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var courseId = await db.CourseEnrollments
             .Where(x => x.StudentId == userId && x.Status == "Active")
             .OrderBy(x => x.EnrolledAt)
@@ -127,6 +129,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         CompleteStepCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var step = await db.LessonSteps
             .Include(x => x.Lesson)
             .ThenInclude(x => x!.Unit)
@@ -241,6 +244,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         string? status,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var query = db.Vocabulary
             .Include(x => x.Lesson)
             .ThenInclude(x => x!.Unit)
@@ -283,6 +287,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         SaveVocabularyCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var word = Apply(new Vocabulary(), command);
         db.Vocabulary.Add(word);
         await db.SaveChangesAsync(cancellationToken);
@@ -294,6 +299,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         SaveVocabularyCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var word = await db.Vocabulary.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (word is null)
         {
@@ -310,6 +316,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
         int vocabularyId,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         if (!await db.Vocabulary.AnyAsync(x => x.Id == vocabularyId, cancellationToken))
         {
             return false;
@@ -333,8 +340,10 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
 
     public async Task<IReadOnlyList<FlashcardDto>> GetFlashcardsAsync(
         int lessonId,
-        CancellationToken cancellationToken = default) =>
-        await db.Flashcards
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.Flashcards
             .Where(x => x.Vocabulary!.LessonId == lessonId)
             .OrderBy(x => x.SortOrder)
             .Select(x => new FlashcardDto(
@@ -348,12 +357,15 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
                 x.Vocabulary.ExampleSentence,
                 x.SortOrder))
             .ToListAsync(cancellationToken);
+    }
+        
 
     public async Task ReviewFlashcardAsync(
         int userId,
         FlashcardReviewCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var vocabularyId = await db.Flashcards
             .Where(x => x.Id == command.FlashcardId)
             .Select(x => x.VocabularyId)
@@ -375,8 +387,10 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
 
     public async Task<IReadOnlyList<GrammarStructureDto>> GetGrammarAsync(
         int lessonId,
-        CancellationToken cancellationToken = default) =>
-        await db.GrammarStructures.AsNoTracking()
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
+        return await db.GrammarStructures.AsNoTracking()
             .Where(x => x.LessonId == lessonId)
             .OrderBy(x => x.SortOrder)
             .Select(x => new GrammarStructureDto(
@@ -389,11 +403,14 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
                 x.VietnameseMeaning,
                 x.SortOrder))
             .ToListAsync(cancellationToken);
+    }
+        
 
     public async Task<GrammarStructureDto> CreateGrammarAsync(
         SaveGrammarCommand command,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var grammar = new GrammarStructure
         {
             LessonId = command.LessonId,
@@ -419,6 +436,7 @@ public sealed class LearningJourneyService(IDbContextFactory<LanguageLearningDbC
 
     private async Task<int?> FindNextLessonIdAsync(Lesson lesson, CancellationToken cancellationToken)
     {
+        await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var courseId = lesson.Unit!.CourseId;
         var ordered = await db.Lessons
             .Where(x => x.Unit!.CourseId == courseId)
