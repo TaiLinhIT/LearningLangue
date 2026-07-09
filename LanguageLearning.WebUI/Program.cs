@@ -1,8 +1,7 @@
 using System.Security.Claims;
 using AntDesign;
 using LanguageLearning.Application.Abstractions;
-using LanguageLearning.Infrastructure;
-using LanguageLearning.Infrastructure.Data;
+using LanguageLearning.Persistence;
 using LanguageLearning.WebUI.Components;
 using LanguageLearning.WebUI.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -13,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ILearningAuthService, DatabaseLearningAuthService>();
@@ -139,10 +137,7 @@ app.MapPost("/auth/sign-out", async (HttpContext httpContext, IAuthService authS
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-if (!app.Configuration.GetValue<bool>("SkipDbInitializer"))
-{
-    await LanguageLearningDbInitializer.InitializeAsync(app.Services);
-}
+
 
 app.Run();
 

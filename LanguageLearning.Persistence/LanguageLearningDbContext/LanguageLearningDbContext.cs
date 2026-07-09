@@ -1,7 +1,7 @@
 using LanguageLearning.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace LanguageLearning.Infrastructure.Data;
+namespace LanguageLearning.Persistence.LanguageLearningDbContext;
 
 public class LanguageLearningDbContext(DbContextOptions<LanguageLearningDbContext> options) : DbContext(options)
 {

@@ -2,7 +2,15 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.16" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
     <ProjectReference Include="..\LanguageLearning.Domain\LanguageLearning.Domain.csproj" />
     <ProjectReference Include="..\LanguageLearning.Infrastructure\LanguageLearning.Infrastructure.csproj" />
@@ -11,7 +19,10 @@
   <ItemGroup>
     <!-- These legacy demo catalog files target the old synchronous domain model. -->
     <Compile Remove="DatabaseLearningCatalogService.cs" />
-    <Compile Remove="Data\DatabaseSeeder.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Configurations\" />
   </ItemGroup>
 
   <PropertyGroup>

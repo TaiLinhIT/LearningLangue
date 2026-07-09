@@ -10,14 +10,11 @@ using LanguageLearning.API.Features.Engagement;
 using LanguageLearning.API.Features.Learning;
 using LanguageLearning.API.Features.Users;
 using LanguageLearning.Application.Abstractions;
-using LanguageLearning.Infrastructure;
-using LanguageLearning.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -133,5 +130,4 @@ app.MapClassEndpoints();
 app.MapEngagementEndpoints();
 app.MapAdminEndpoints();
 
-await LanguageLearningDbInitializer.InitializeAsync(app.Services);
 app.Run();

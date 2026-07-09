@@ -5,6 +5,7 @@
     <ProjectReference Include="..\LanguageLearning.Application\LanguageLearning.Application.csproj" />
     <ProjectReference Include="..\LanguageLearning.Domain\LanguageLearning.Domain.csproj" />
     <ProjectReference Include="..\LanguageLearning.Infrastructure\LanguageLearning.Infrastructure.csproj" />
+    <ProjectReference Include="..\LanguageLearning.Persistence\LanguageLearning.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
